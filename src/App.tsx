@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import NotesPage from "./pages/NotesPage";
 import LoginForm from "./pages/LoginForm";
-import logo from "./logo.svg";
 import "./App.css";
 
 function App() {

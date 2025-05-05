@@ -13,7 +13,6 @@ import {
   fetchNotes,
   createNote,
   updateNote,
-  deleteNote,
   updateNoteImportant,
   updateNotePinned,
   updateNoteCompleted,
