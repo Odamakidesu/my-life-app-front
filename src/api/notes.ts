@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from "./axiosInstance"
 import { Note } from "../types/note";
 
 // APIのベースURL

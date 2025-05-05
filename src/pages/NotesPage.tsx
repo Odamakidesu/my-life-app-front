@@ -410,8 +410,24 @@ const NotesPage: React.FC<NotesPageProps> = ({ theme }) => {
     );
   }, [theme]);
 
+  // ログアウト処理
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    window.location.href = "/"; // ルートにリダイレクト（リロードで状態リセット）
+  };
+
   return (
     <div className={"container mt-4"}>
+      <div className="d-flex justify-content-end align-items-center mb-4">
+        <Button
+          variant="outline-danger"
+          className="d-flex align-items-center"
+          onClick={handleLogout}
+        >
+          <i className="bi bi-box-arrow-right me-2"></i>
+          ログアウト
+        </Button>
+      </div>
       {isLoading || isDeleting ? (
         <div
           className="d-flex justify-content-center align-items-center"

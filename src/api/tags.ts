@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from "./axiosInstance"
 import { Tag } from "../types/tags";
 
 const API_URL = `${process.env.REACT_APP_API_BASE_URL}/tags`;
