@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import NotesPage from "./pages/NotesPage";
 import LoginForm from "./pages/LoginForm";
+import RequireAuth from "./components/RequireAuth";
 import "./App.css";
 
 function App() {
@@ -37,7 +38,14 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<LoginForm />} />
-          <Route path="/notes" element={<NotesPage theme={theme} />} />
+          <Route
+            path="/notes"
+            element={
+              <RequireAuth>
+                <NotesPage theme={theme} />
+              </RequireAuth>
+            }
+          />
         </Routes>
       </Router>
     </div>
