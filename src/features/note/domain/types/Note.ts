@@ -19,12 +19,16 @@ export type Note = {
   deadline?: string;
 };
 
-/** 新規メモの作成に必要な入力値 */
+/**
+ * 新規メモの作成に必要な入力値。
+ *
+ * createdAt は持たない。作成日時と所有者はサーバが決めるため、
+ * クライアントが送っても無視される。
+ */
 export type NewNote = {
   title: string;
   content: string;
   tags: string;
-  createdAt: string;
   deadline?: string | null;
 };
 

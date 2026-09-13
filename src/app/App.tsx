@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter as Router } from "react-router-dom";
 import AppRoutes from "app/routes/AppRoutes";
+import SessionExpiryWatcher from "app/components/SessionExpiryWatcher";
 import { useTheme } from "app/hooks/useTheme";
 import ThemeToggle from "shared/components/ThemeToggle";
 import "shared/styles/App.css";
@@ -17,6 +18,8 @@ function App() {
       <Router
         future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
       >
+        {/* 通信層からのセッション失効通知を受けて退避させる（表示は持たない） */}
+        <SessionExpiryWatcher />
         <AppRoutes theme={theme} />
       </Router>
     </div>

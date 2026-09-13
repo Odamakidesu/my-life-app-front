@@ -21,6 +21,12 @@ export type ErrorDescription = {
   url?: string;
   /** ライブラリが付けた要約メッセージ（本文は含まない） */
   message: string;
+  /**
+   * サーバが発行した相関ID。
+   * 応答本文のうちここだけは取り出す。サーバのログと 1 対 1 で突き合わせられる唯一の鍵で、
+   * かつ利用者データも内部構造も含まないため、出しても安全。
+   */
+  traceId?: string;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -36,12 +42,15 @@ export const describeError = (error: unknown): ErrorDescription => {
     const status =
       typeof response?.status === "number" ? response.status : undefined;
 
+    const data = isRecord(response?.data) ? response?.data : undefined;
+
     return {
       kind: status === undefined ? "network" : "http",
       status,
       method: stringOrUndefined(config?.method)?.toUpperCase(),
       url: stringOrUndefined(config?.url),
       message: stringOrUndefined(error.message) ?? "",
+      traceId: stringOrUndefined(data?.traceId),
     };
   }
 

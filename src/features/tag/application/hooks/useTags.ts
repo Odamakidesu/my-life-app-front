@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Tag } from "features/tag/domain/types/Tag";
 import { useServices } from "infrastructure/di/ServicesContext";
 import { Notifier } from "shared/types/Notifier";
+import { apiFailureMessage, toApiFailure } from "shared/api/apiFailure";
 import { describeError } from "shared/logging/describeError";
 
 /**
@@ -22,7 +23,12 @@ export const useTags = (notify?: Notifier) => {
         if (isCurrent) setTags(loaded);
       } catch (error) {
         console.error("タグ取得失敗", describeError(error));
-        if (isCurrent) notify?.("タグの取得に失敗しました", "warning");
+        const failure = toApiFailure(error);
+        // 401 は通信層がログイン画面へ退避させる。ここで通知すると
+        // 遷移の途中で実態と食い違う警告が一瞬出るだけになる。
+        if (isCurrent && failure.kind !== "unauthorized") {
+          notify?.(apiFailureMessage(failure, "タグの取得に失敗しました"), "warning");
+        }
       }
     };
 

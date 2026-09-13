@@ -1,18 +1,26 @@
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLogin } from "features/auth/application/hooks/useLogin";
 import {
   Credentials,
   credentialsSchema,
   emptyCredentials,
 } from "features/auth/domain/schemas/CredentialsSchema";
+import { SESSION_EXPIRED_PARAM } from "shared/auth/sessionExpiry";
 
 /** ログイン画面 */
 const LoginPage: React.FC = () => {
   const { error, login } = useLogin();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  /**
+   * 操作中にサーバが 401 を返してここへ戻された場合に立つ。
+   * これが無いと、利用者にはメモ画面が理由も無くログイン画面に変わったようにしか見えない。
+   */
+  const wasSessionExpired = searchParams.get(SESSION_EXPIRED_PARAM) !== null;
 
   const {
     register,
@@ -40,8 +48,19 @@ const LoginPage: React.FC = () => {
       >
         <h2 className="text-center mb-4">ログイン</h2>
 
+        {/* 操作中の失効でここへ戻された場合。入力ミスとは別物なので色を分ける */}
+        {wasSessionExpired && !error && (
+          <div className="alert alert-warning" role="status">
+            セッションの有効期限が切れました。もう一度ログインしてください。
+          </div>
+        )}
+
         {/* 認証そのものの失敗（サーバー応答） */}
-        {error && <div className="alert alert-danger">{error}</div>}
+        {error && (
+          <div className="alert alert-danger" role="alert">
+            {error}
+          </div>
+        )}
 
         <div className="mb-3">
           <label htmlFor="username" className="form-label">

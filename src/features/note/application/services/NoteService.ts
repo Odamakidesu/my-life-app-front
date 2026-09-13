@@ -1,4 +1,3 @@
-import { format } from "date-fns-tz";
 import { toTagString } from "features/note/domain/policies/NotePolicy";
 import { Note, NoteId } from "features/note/domain/types/Note";
 import { NoteRepository } from "features/note/domain/repositories/NoteRepository";
@@ -27,7 +26,6 @@ export class NoteService {
       title: validated.title,
       content: validated.content,
       tags: toTagString(validated.tags),
-      createdAt: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"),
       deadline: validated.deadline,
     });
   }
@@ -47,11 +45,6 @@ export class NoteService {
   /** メモを論理削除する */
   async softDelete(id: NoteId): Promise<void> {
     await this.repository.markAsDeleted(id);
-  }
-
-  /** メモを物理削除する */
-  async deletePermanently(id: NoteId): Promise<void> {
-    await this.repository.remove(id);
   }
 
   /** スター（重要フラグ）を切り替える */

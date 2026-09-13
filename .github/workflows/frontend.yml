@@ -1,22 +1,73 @@
 name: Deploy Frontend to S3
 
+# アクションはすべてコミット SHA でピン止めする。可変タグ (@v3, @v4) のままだと、
+# 上流リポジトリやメンテナのアカウントが侵害されてタグを差し替えられた場合に、
+# 次回の push で悪意あるコードが AWS 資格情報を持つジョブの中で実行される。
+# 更新時は `git ls-remote --tags https://github.com/<repo> 'refs/tags/<tag>^{}'` で取り直すこと。
+
 on:
   push:
     branches:
       - main
+  # PR 時にテストを走らせる。以前は push(main) だけで、しかもテストを一度も実行していなかった。
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
 
 jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test -- --watchAll=false --coverage
+        env:
+          CI: true
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: coverage
+          path: coverage
+          retention-days: 7
+
   deploy:
+    name: Build and Deploy to S3
+    # テストが落ちたらデプロイしない。
+    # なお `needs:` だけでは PR のマージ自体は止まらないので、GitHub の branch protection で
+    # test を Required status check に指定すること。
+    needs: test
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "20"
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
@@ -25,17 +76,41 @@ jobs:
         run: |
           echo "REACT_APP_API_BASE_URL=${{ secrets.REACT_APP_API_BASE_URL }}" > .env.production
 
+      # CI=false は警告を握り潰す設定で、lint の指摘が出ても気づけなくなる。
+      # 現状は警告ゼロでビルドが通るため、警告をエラーとして扱う既定に戻す。
       - name: Build
-        run: |
-          GENERATE_SOURCEMAP=false CI=false npm run build
+        run: GENERATE_SOURCEMAP=false npm run build
+        env:
+          CI: true
+
+      # TODO(セキュリティ): 静的な長命アクセスキーをやめ、GitHub OIDC のロール引受に移行すること。
+      # 移行手順はバックエンドの docs/runbook-security-hardening.md を参照。移行後はここを次に置き換える:
+      #   permissions:
+      #     id-token: write
+      #     contents: read
+      #   - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a
+      #     with:
+      #       role-to-assume: arn:aws:iam::498504718094:role/github-actions-frontend-deploy
+      #       aws-region: ap-northeast-1
+      #
+      # 第三者製の s3-sync-action は使わない。AWS の資格情報をそのまま渡すため、
+      # 上流が侵害されると鍵ごと持ち出される。公式アクションと AWS CLI で同じことができ、
+      # OIDC への移行もこちらでないとできない。
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-1
 
       - name: Deploy to S3
-        uses: jakejarvis/s3-sync-action@v0.5.1
-        with:
-          args: --delete
         env:
-          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ap-northeast-1
-          SOURCE_DIR: ./build
+          BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+        run: |
+          # ハッシュ付きの静的資産は長期キャッシュ、index.html は毎回取り直させる。
+          # index.html をキャッシュさせると、古い HTML が新しい JS を指せずに白画面になる。
+          aws s3 sync ./build "s3://$BUCKET" --delete \
+            --exclude "index.html" \
+            --cache-control "public,max-age=31536000,immutable"
+          aws s3 cp ./build/index.html "s3://$BUCKET/index.html" \
+            --cache-control "no-cache,no-store,must-revalidate"

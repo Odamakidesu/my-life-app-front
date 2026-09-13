@@ -4,9 +4,24 @@ import { Note, NoteId } from "features/note/domain/types/Note";
 import { sortByPriority } from "features/note/domain/policies/NoteSortPolicy";
 import { NoteInput, NoteValidationError } from "features/note/domain/schemas/NoteSchema";
 import { useServices } from "infrastructure/di/ServicesContext";
+import {
+  ApiFailure,
+  apiFailureMessage,
+  toApiFailure,
+} from "shared/api/apiFailure";
 import { describeError } from "shared/logging/describeError";
 
 const DELETE_ANIMATION_MS = 300;
+
+/**
+ * 利用者に通知すべき失敗かどうか。
+ *
+ * 401 は通信層がトークンを破棄してログイン画面へ退避させる。
+ * ここでも通知すると、画面が切り替わる途中で赤いトーストが一瞬出るだけになり、
+ * しかも「メモの取得に失敗しました」という実態と食い違う文言が残る。
+ */
+const shouldNotifyFailure = (failure: ApiFailure): boolean =>
+  failure.kind !== "unauthorized";
 
 /**
  * メモのユースケースを React コンポーネントから使うためのアダプタ。
@@ -33,19 +48,6 @@ export const useNotes = (notify: Notifier) => {
     generation.current += 1;
   }, []);
 
-  const handleFailure = useCallback(
-    (error: unknown, fallbackMessage: string): false => {
-      if (error instanceof NoteValidationError) {
-        notify(error.message, "danger");
-      } else {
-        console.error(fallbackMessage, describeError(error));
-        notify(fallbackMessage, "danger");
-      }
-      return false;
-    },
-    [notify]
-  );
-
   const reload = useCallback(async () => {
     const current = ++generation.current;
     pendingReloads.current += 1;
@@ -56,14 +58,47 @@ export const useNotes = (notify: Notifier) => {
       if (current === generation.current) setNotes(loaded);
     } catch (error) {
       console.error("メモ取得失敗", describeError(error));
-      if (current === generation.current) {
-        notify("メモの取得に失敗しました", "danger");
+      const failure = toApiFailure(error);
+      if (current === generation.current && shouldNotifyFailure(failure)) {
+        notify(apiFailureMessage(failure, "メモの取得に失敗しました"), "danger");
       }
     } finally {
       pendingReloads.current -= 1;
       if (pendingReloads.current === 0) setIsLoading(false);
     }
   }, [noteService, notify]);
+
+  /**
+   * 失敗を利用者向けの通知に落とす。
+   *
+   * サーバは失敗時に利用者向けのメッセージを返すので、呼び出し側の定型文より
+   * それを優先する。「メモの削除に失敗しました」より
+   * 「対象のメモが見つかりませんでした」の方が、次に何をすべきかが分かる。
+   */
+  const handleFailure = useCallback(
+    (error: unknown, fallbackMessage: string): false => {
+      if (error instanceof NoteValidationError) {
+        notify(error.message, "danger");
+        return false;
+      }
+
+      console.error(fallbackMessage, describeError(error));
+      const failure = toApiFailure(error);
+
+      if (failure.kind === "notFound") {
+        // 他の端末で削除された等で手元の一覧が古い。取り直せば表示が揃う。
+        notify("対象のメモが見つかりませんでした。一覧を更新します。", "warning");
+        void reload();
+        return false;
+      }
+
+      if (shouldNotifyFailure(failure)) {
+        notify(apiFailureMessage(failure, fallbackMessage), "danger");
+      }
+      return false;
+    },
+    [notify, reload]
+  );
 
   useEffect(() => {
     reload();

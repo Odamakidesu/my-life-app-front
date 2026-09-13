@@ -12,8 +12,12 @@ export interface NoteRepository {
   updateImportant(id: NoteId, isImportant: boolean): Promise<void>;
   updatePinned(id: NoteId, isPinned: boolean): Promise<void>;
   updateCompleted(id: NoteId, isCompleted: boolean): Promise<void>;
-  /** 論理削除（削除フラグの更新） */
+  /**
+   * 論理削除（削除フラグの更新）。
+   *
+   * 物理削除のポートは持たない。サーバ側に対応するエンドポイントが無く、
+   * 実装があっても呼べば 405 になるだけで、消し忘れると
+   * 「呼べるように見えて必ず失敗する操作」が残り続ける。
+   */
   markAsDeleted(id: NoteId): Promise<void>;
-  /** 物理削除 */
-  remove(id: NoteId): Promise<void>;
 }

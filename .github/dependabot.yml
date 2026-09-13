@@ -1,0 +1,27 @@
+version: 2
+
+# 依存の脆弱性を継続的に検知する。
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      # 個別に上げると相互のバージョン整合が崩れやすい組をまとめる
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      testing-library:
+        patterns:
+          - "@testing-library/*"
+
+  # ワークフローのアクションは SHA でピン止めしているため、
+  # Dependabot に更新させないと古いまま固定される。
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
