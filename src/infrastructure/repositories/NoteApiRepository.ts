@@ -1,6 +1,6 @@
 import { AxiosInstance } from "axios";
-import { NewNote, Note, NoteEdit, NoteId } from "features/note/domain/types/Note";
-import { NoteRepository } from "features/note/domain/repositories/NoteRepository";
+import { NewNote, Note, NoteEdit, NoteId } from "features/note/types/types";
+import { NoteRepository } from "features/note/types/types";
 import {
   parseNote,
   parseNoteList,

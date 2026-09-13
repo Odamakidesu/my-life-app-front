@@ -12,8 +12,7 @@ export const useTheme = () => {
   );
 
   useEffect(() => {
-    document.body.className = ""; // 一度リセット
-    document.body.classList.add(`${theme}-theme`);
+    document.documentElement.dataset.bsTheme = theme;
     themeStorage.save(theme); // 保存
   }, [theme]);
 

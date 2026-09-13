@@ -4,7 +4,7 @@ import {
   TITLE_MAX_LENGTH,
   noteInputSchema,
   parseNoteInput,
-} from "features/note/domain/schemas/NoteSchema";
+} from "features/note/types/schema";
 
 const validInput = {
   title: "会議の準備",

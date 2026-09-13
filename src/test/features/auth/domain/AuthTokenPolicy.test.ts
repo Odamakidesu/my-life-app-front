@@ -1,4 +1,4 @@
-import { isTokenValid } from "features/auth/domain/policies/AuthTokenPolicy";
+import { isTokenValid } from "features/auth/logic";
 
 /** 署名は検証されないため、ペイロードだけが意味を持つ JWT 風の文字列を組む */
 const tokenWithPayload = (payload: Record<string, unknown>): string =>

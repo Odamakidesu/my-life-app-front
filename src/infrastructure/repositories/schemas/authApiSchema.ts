@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AuthToken } from "features/auth/domain/types/AuthToken";
+import { AuthToken } from "features/auth/types/types";
 
 /**
  * ログイン応答の形。

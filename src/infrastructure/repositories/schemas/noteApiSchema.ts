@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Note } from "features/note/domain/types/Note";
+import { Note } from "features/note/types/types";
 
 /**
  * API が返すメモの形。

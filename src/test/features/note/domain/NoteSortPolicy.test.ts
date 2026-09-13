@@ -1,8 +1,8 @@
-import { Note } from "features/note/domain/types/Note";
+import { Note } from "features/note/types/types";
 import {
   compareByPriority,
   sortByPriority,
-} from "features/note/domain/policies/NoteSortPolicy";
+} from "features/note/logic";
 
 const noteOf = (id: number, overrides: Partial<Note> = {}): Note => ({
   id,

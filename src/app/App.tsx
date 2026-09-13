@@ -11,7 +11,7 @@ function App() {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className={`container ${theme}-theme`}>
+    <div className="container">
       <ThemeToggle theme={theme} onToggle={toggleTheme} />
 
       {/* v7 で既定になる挙動を先取りして有効化しておく */}

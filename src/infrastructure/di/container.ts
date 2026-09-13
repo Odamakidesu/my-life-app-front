@@ -1,10 +1,10 @@
-import { AuthService } from "features/auth/application/services/AuthService";
-import { NoteService } from "features/note/application/services/NoteService";
-import { TagService } from "features/tag/application/services/TagService";
-import { AuthRepository } from "features/auth/domain/repositories/AuthRepository";
-import { TokenStorage } from "features/auth/domain/repositories/TokenStorage";
-import { NoteRepository } from "features/note/domain/repositories/NoteRepository";
-import { TagRepository } from "features/tag/domain/repositories/TagRepository";
+import { AuthService } from "features/auth/services/AuthService";
+import { NoteService } from "features/note/services/NoteService";
+import { TagService } from "features/tag/services/TagService";
+import { AuthRepository } from "features/auth/types/types";
+import { TokenStorage } from "features/auth/types/types";
+import { NoteRepository } from "features/note/types/types";
+import { TagRepository } from "features/tag/types/types";
 import { httpClient } from "infrastructure/http/httpClient";
 import { AuthApiRepository } from "infrastructure/repositories/AuthApiRepository";
 import { NoteApiRepository } from "infrastructure/repositories/NoteApiRepository";

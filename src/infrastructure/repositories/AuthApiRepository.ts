@@ -1,7 +1,7 @@
 import { AxiosInstance } from "axios";
-import { AuthRepository } from "features/auth/domain/repositories/AuthRepository";
-import { AuthToken } from "features/auth/domain/types/AuthToken";
-import { Credentials } from "features/auth/domain/schemas/CredentialsSchema";
+import { AuthRepository } from "features/auth/types/types";
+import { AuthToken } from "features/auth/types/types";
+import { Credentials } from "features/auth/types/schema";
 import { parseLoginResponse } from "infrastructure/repositories/schemas/authApiSchema";
 
 const RESOURCE = "/auth/login";

@@ -1,9 +1,9 @@
-import { Note } from "features/note/domain/types/Note";
+import { Note } from "features/note/types/types";
 import {
   deadlineStatusOf,
   tagNamesOf,
   toTagString,
-} from "features/note/domain/policies/NotePolicy";
+} from "features/note/logic";
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const NOW = new Date("2025-06-15T12:00:00Z");

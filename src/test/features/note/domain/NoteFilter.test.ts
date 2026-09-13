@@ -1,9 +1,8 @@
-import { Note } from "features/note/domain/types/Note";
+import { Note, NoteFilterCriteria } from "features/note/types/types";
 import {
-  NoteFilterCriteria,
   emptyFilterCriteria,
   filterNotes,
-} from "features/note/domain/policies/NoteFilter";
+} from "features/note/logic";
 
 const noteOf = (id: number, overrides: Partial<Note> = {}): Note => ({
   id,

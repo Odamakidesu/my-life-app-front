@@ -1,5 +1,5 @@
-import { AuthToken } from "features/auth/domain/types/AuthToken";
-import { TokenStorage } from "features/auth/domain/repositories/TokenStorage";
+import { AuthToken } from "features/auth/types/types";
+import { TokenStorage } from "features/auth/types/types";
 
 const TOKEN_KEY = "token";
 

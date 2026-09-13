@@ -1,9 +1,9 @@
 import React from "react";
 import { Route, Routes } from "react-router-dom";
 import { ThemeName } from "shared/types/theme";
-import RequireAuth from "features/auth/presentation/components/RequireAuth";
-import LoginPage from "features/auth/presentation/pages/LoginPage";
-import NotesPage from "features/note/presentation/pages/NotesPage";
+import RequireAuth from "features/auth/components/RequireAuth";
+import LoginPage from "features/auth";
+import NotesPage from "features/note";
 
 type AppRoutesProps = {
   theme: ThemeName;

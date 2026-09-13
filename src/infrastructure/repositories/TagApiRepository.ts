@@ -1,6 +1,6 @@
 import { AxiosInstance } from "axios";
-import { Tag } from "features/tag/domain/types/Tag";
-import { TagRepository } from "features/tag/domain/repositories/TagRepository";
+import { Tag } from "features/tag/types/types";
+import { TagRepository } from "features/tag/types/types";
 import { parseTagList } from "infrastructure/repositories/schemas/tagApiSchema";
 
 const RESOURCE = "/tags";

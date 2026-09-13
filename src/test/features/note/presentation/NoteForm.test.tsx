@@ -3,8 +3,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import {
   TITLE_MAX_LENGTH,
   emptyNoteInput,
-} from "features/note/domain/schemas/NoteSchema";
-import NoteForm from "features/note/presentation/components/NoteForm";
+} from "features/note/types/schema";
+import NoteForm from "features/note/components/NoteForm";
 
 test("未入力のまま送信するとドメインの検証メッセージが出て、送信されない", async () => {
   const onSubmit = jest.fn();

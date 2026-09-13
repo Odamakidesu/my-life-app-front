@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Tag } from "features/tag/domain/types/Tag";
+import { Tag } from "features/tag/types/types";
 
 /**
  * API が返すタグの形。

@@ -1,10 +1,10 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import LoginPage from "features/auth/presentation/pages/LoginPage";
+import LoginPage from "features/auth";
 import SessionExpiryWatcher from "app/components/SessionExpiryWatcher";
 import { emitSessionExpired } from "shared/auth/sessionExpiry";
-import { loginFailureMessage } from "features/auth/application/hooks/useLogin";
+import { loginFailureMessage } from "features/auth/hooks/useLogin";
 import { toApiFailure } from "shared/api/apiFailure";
 import { act } from "react";
 

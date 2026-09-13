@@ -55,15 +55,6 @@ mark.custom-highlight {
   opacity: 0.8;
 }
 
-.card-hover {
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.card-hover:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-}
-
 .sticky-tags-wrapper {
   position: sticky;
   top: 70px;

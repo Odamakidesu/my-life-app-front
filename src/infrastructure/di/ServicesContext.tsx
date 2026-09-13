@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useMemo } from "react";
-import { AuthService } from "features/auth/application/services/AuthService";
-import { NoteService } from "features/note/application/services/NoteService";
-import { TagService } from "features/tag/application/services/TagService";
+import { AuthService } from "features/auth/services/AuthService";
+import { NoteService } from "features/note/services/NoteService";
+import { TagService } from "features/tag/services/TagService";
 import { authService, noteService, tagService } from "infrastructure/di/container";
 
 /**

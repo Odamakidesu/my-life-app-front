@@ -17,7 +17,7 @@ const ToastNotifier: React.FC<ToastNotifierProps> = ({
   isVisible,
   onClose,
 }) => (
-  <ToastContainer position="bottom-end" className="p-3 fixed-toast">
+  <ToastContainer position="bottom-end" className="p-3">
     <Toast
       onClose={onClose}
       show={isVisible}
