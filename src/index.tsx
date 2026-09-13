@@ -1,20 +1,22 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import "./index.css";
-import App from "./App";
-import reportWebVitals from "./reportWebVitals";
 import "bootstrap/dist/css/bootstrap.min.css";
-<link
-  rel="stylesheet"
-  href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"
-/>;
+import App from "app/App";
+import ErrorBoundary from "app/components/ErrorBoundary";
+import { registerGlobalErrorHandlers } from "app/errorReporting";
+import reportWebVitals from "app/reportWebVitals";
+import "shared/styles/index.css";
+
+registerGlobalErrorHandlers();
 
 const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement
 );
 root.render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>
 );
 

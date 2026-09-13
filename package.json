@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@hookform/resolvers": "^3.10.0",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
@@ -18,12 +19,14 @@
     "react": "^19.1.0",
     "react-bootstrap": "^2.10.9",
     "react-dom": "^19.1.0",
-    "react-router-dom": "^7.5.2",
+    "react-hook-form": "^7.88.0",
+    "react-router-dom": "^6.30.6",
     "react-scripts": "5.0.1",
     "react-select": "^5.10.1",
     "react-transition-group": "^4.4.5",
     "typescript": "^4.9.5",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "zod": "^3.25.76"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -35,6 +38,12 @@
     "extends": [
       "react-app",
       "react-app/jest"
+    ]
+  },
+  "jest": {
+    "transformIgnorePatterns": [
+      "[/\\\\]node_modules[/\\\\](?!axios|date-fns|date-fns-tz)[^/\\\\]+[/\\\\].+\\.(js|jsx|mjs|cjs|ts|tsx)$",
+      "^.+\\.module\\.(css|sass|scss)$"
     ]
   },
   "browserslist": {
@@ -50,7 +59,6 @@
     ]
   },
   "devDependencies": {
-    "@types/date-fns": "^2.6.3",
-    "@types/react-router-dom": "^5.3.3"
+    "@types/date-fns": "^2.6.3"
   }
 }
