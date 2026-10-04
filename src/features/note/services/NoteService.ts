@@ -1,8 +1,19 @@
 import { toTagString } from "features/note/logic";
-import { Note, NoteId } from "features/note/types/types";
-import { NoteRepository } from "features/note/types/types";
+import {
+  ExportFormat,
+  ExportedFile,
+  Note,
+  NoteId,
+  NotePage,
+  NoteQuery,
+  NoteRepository,
+  NoteSummary,
+  Recurrence,
+} from "features/note/types/types";
 import { NoteInput, parseNoteInput } from "features/note/types/schema";
-import { sortByPriority } from "features/note/logic";
+
+const toRecurrence = (value: NoteInput["recurrence"]): Recurrence | null =>
+  value === "" ? null : value;
 
 /**
  * メモに関するユースケースを組み立てるアプリケーションサービス。
@@ -12,10 +23,19 @@ import { sortByPriority } from "features/note/logic";
 export class NoteService {
   constructor(private readonly repository: NoteRepository) {}
 
-  /** 表示順に整えたメモ一覧を取得する */
-  async list(): Promise<Note[]> {
-    const notes = await this.repository.findAll();
-    return sortByPriority(notes);
+  /** 条件に合うメモを1ページ分取得する（絞り込みと並べ替えはサーバが行う） */
+  async search(query: NoteQuery, page: number, size: number): Promise<NotePage> {
+    return this.repository.search(query, page, size);
+  }
+
+  /** 全件・期限切れ・24時間以内の件数 */
+  async summarize(): Promise<NoteSummary> {
+    return this.repository.summarize();
+  }
+
+  /** 自分のメモ（ゴミ箱以外）をファイルとして書き出す */
+  async exportAll(format: ExportFormat): Promise<ExportedFile> {
+    return this.repository.exportAll(format);
   }
 
   /** メモを新規作成する */
@@ -27,6 +47,7 @@ export class NoteService {
       content: validated.content,
       tags: toTagString(validated.tags),
       deadline: validated.deadline,
+      recurrence: toRecurrence(validated.recurrence),
     });
   }
 
@@ -39,6 +60,7 @@ export class NoteService {
       content: validated.content,
       tags: toTagString(validated.tags),
       deadline: validated.deadline,
+      recurrence: toRecurrence(validated.recurrence),
     });
   }
 
@@ -47,12 +69,9 @@ export class NoteService {
     await this.repository.markAsDeleted(id);
   }
 
-  /** ゴミ箱のメモを、削除前の作成日時の新しい順で取得する */
+  /** ゴミ箱のメモ（サーバがゴミ箱に入れた日時の新しい順で返す） */
   async listDeleted(): Promise<Note[]> {
-    const notes = await this.repository.findDeleted();
-    return [...notes].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    return this.repository.findDeleted();
   }
 
   /** ゴミ箱から一覧へ戻す */
@@ -75,8 +94,11 @@ export class NoteService {
     await this.repository.updatePinned(note.id, !note.isPinned);
   }
 
-  /** 完了状態を切り替える */
-  async toggleCompleted(note: Note): Promise<void> {
-    await this.repository.updateCompleted(note.id, !note.isCompleted);
+  /**
+   * 完了状態を切り替える。
+   * 繰り返しのメモを完了にした場合は、サーバが作った次回分の ID を返す。
+   */
+  async toggleCompleted(note: Note): Promise<NoteId | null> {
+    return this.repository.updateCompleted(note.id, !note.isCompleted);
   }
 }

@@ -1,84 +1,82 @@
-import React, {
-  useCallback,
-  useDeferredValue,
-  useMemo,
-  useState,
-} from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
-import { Button } from "react-bootstrap";
+import { Button, Dropdown } from "react-bootstrap";
 import { Link } from "react-router-dom";
-import { useAuth } from "features/auth/hooks/useAuth";
+import { useAuth, useCurrentUser } from "features/auth/hooks/useAuth";
 import { useNotes } from "features/note/hooks/useNotes";
 import { useTags } from "features/tag/hooks/useTags";
-import { Note, NoteFilterOptions } from "features/note/types/types";
 import {
-  emptyFilterOptions,
-  filterNotes,
-} from "features/note/logic";
+  DueFilter,
+  Note,
+  NoteFilterOptions,
+  NoteSort,
+} from "features/note/types/types";
+import { emptyFilterOptions, toNoteQuery } from "features/note/logic";
 import { NoteInput, emptyNoteInput } from "features/note/types/schema";
-import { sortByPriority } from "features/note/logic";
 import { ThemeName } from "shared/types/theme";
 import ToastNotifier from "shared/components/ToastNotifier";
 import ActiveTagFilters from "features/note/components/ActiveTagFilters";
 import NoteFilterPanel from "features/note/components/NoteFilterPanel";
-import NoteForm, {
-  toNoteInput,
-} from "features/note/components/NoteForm";
+import NoteForm, { toNoteInput } from "features/note/components/NoteForm";
 import NoteList from "features/note/components/NoteList";
 import NoteSearchBar from "features/note/components/NoteSearchBar";
+import NoteToolbar from "features/note/components/NoteToolbar";
 import { useToast } from "shared/hooks/useToast";
+import { useDebouncedValue } from "shared/hooks/useDebouncedValue";
 
 type NotesPageProps = {
   theme: ThemeName;
 };
 
+/** 検索語をサーバへ送るまでの待ち時間。打鍵のたびに要求しないため */
+const SEARCH_DEBOUNCE_MS = 300;
+
 /**
  * メモ一覧画面。
  * 入力値の検証は NoteForm（= ドメインのスキーマ）に任せ、
- * この画面は「何を表示するか」と「どのユースケースを呼ぶか」だけを持つ。
+ * この画面は「どの条件で表示するか」と「どのユースケースを呼ぶか」だけを持つ。
+ * 絞り込みと並べ替えはサーバが行う。
  */
 const NotesPage: React.FC<NotesPageProps> = ({ theme }) => {
   const { message, variant, isVisible, showToast, hideToast } = useToast();
+
+  const [filters, setFilters] = useState<NoteFilterOptions>(emptyFilterOptions);
+  const [sort, setSort] = useState<NoteSort>("PRIORITY");
+  const [due, setDue] = useState<DueFilter | undefined>(undefined);
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedQuery = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
+
+  // useNotes は query の参照が変わるたびに取り直すので、条件が変わったときだけ作り直す
+  const query = useMemo(
+    () => toNoteQuery(filters, debouncedQuery, sort, due),
+    [filters, debouncedQuery, sort, due]
+  );
+
   const {
     notes,
+    total,
+    summary,
+    hasMore,
     isLoading,
     isDeleting,
+    loadMore,
     addNote,
     saveNote,
     deleteNote,
     toggleImportant,
     togglePinned,
     toggleCompleted,
-  } = useNotes(showToast);
+    exportNotes,
+  } = useNotes(showToast, query);
   const { tags } = useTags(showToast);
   const { logout } = useAuth();
+  const currentUser = useCurrentUser();
 
   const [editingNote, setEditingNote] = useState<Note | null>(null);
-  const [filters, setFilters] = useState<NoteFilterOptions>(emptyFilterOptions);
-
-  // 検索キーワードは打鍵ごとに変わるので絞り込み条件とは別に持ち、
-  // 一覧の再計算だけを遅延させて入力の引っかかりをなくす。
-  const [searchQuery, setSearchQuery] = useState("");
-  const deferredQuery = useDeferredValue(searchQuery);
 
   const updateFilters = useCallback((patch: Partial<NoteFilterOptions>) => {
     setFilters((prev) => ({ ...prev, ...patch }));
   }, []);
-
-  const visibleNotes = useMemo(
-    () =>
-      filterNotes(sortByPriority(notes), {
-        ...filters,
-        searchQuery: deferredQuery,
-      }),
-    [notes, filters, deferredQuery]
-  );
-
-  /** 追加・更新・削除のあとに編集状態とタグフィルターを初期化する */
-  const resetAfterMutation = useCallback(() => {
-    setEditingNote(null);
-    updateFilters({ tags: [] });
-  }, [updateFilters]);
 
   /** 編集中なら更新、そうでなければ新規作成 */
   const handleSubmitNote = useCallback(
@@ -87,10 +85,10 @@ const NotesPage: React.FC<NotesPageProps> = ({ theme }) => {
         ? await saveNote(editingNote.id, values)
         : await addNote(values);
 
-      if (succeeded) resetAfterMutation();
+      if (succeeded) setEditingNote(null);
       return succeeded;
     },
-    [editingNote, saveNote, addNote, resetAfterMutation]
+    [editingNote, saveNote, addNote]
   );
 
   const handleDeleteNote = useCallback(
@@ -98,9 +96,9 @@ const NotesPage: React.FC<NotesPageProps> = ({ theme }) => {
       if (!window.confirm("メモをゴミ箱に移動しますか？（ゴミ箱から復元できます）")) return;
 
       const succeeded = await deleteNote(id);
-      if (succeeded) resetAfterMutation();
+      if (succeeded) setEditingNote(null);
     },
-    [deleteNote, resetAfterMutation]
+    [deleteNote]
   );
 
   const handleTagClick = useCallback((tag: string) => {
@@ -126,24 +124,47 @@ const NotesPage: React.FC<NotesPageProps> = ({ theme }) => {
 
   const handleCancelEdit = useCallback(() => setEditingNote(null), []);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     window.location.href = "/"; // ルートにリダイレクト（リロードで状態リセット）
   };
 
+  // 初回の読み込み中だけ一覧を差し替える。「もっと見る」や更新後の取り直しでは
+  // 表示中のカードを残し、スクロール位置が先頭に飛ばないようにする。
+  const showSpinner = (isLoading && notes.length === 0) || isDeleting;
+
   return (
     <div className="container mt-4" data-bs-theme={theme}>
-      <div className="d-flex justify-content-end align-items-center gap-2 mb-4">
+      <div className="d-flex flex-wrap justify-content-end align-items-center gap-2 mb-4">
         <Link to="/tags" className="btn btn-outline-secondary">
           タグ管理
         </Link>
         <Link to="/trash" className="btn btn-outline-secondary">
           ゴミ箱
         </Link>
+        <Dropdown>
+          <Dropdown.Toggle variant="outline-secondary" id="export-menu">
+            エクスポート
+          </Dropdown.Toggle>
+          <Dropdown.Menu>
+            <Dropdown.Item onClick={() => void exportNotes("csv")}>
+              CSV（表計算ソフト向け）
+            </Dropdown.Item>
+            <Dropdown.Item onClick={() => void exportNotes("json")}>JSON</Dropdown.Item>
+          </Dropdown.Menu>
+        </Dropdown>
+        <Link to="/account" className="btn btn-outline-secondary">
+          アカウント
+        </Link>
+        {currentUser?.role === "ADMIN" && (
+          <Link to="/admin" className="btn btn-outline-secondary">
+            管理画面
+          </Link>
+        )}
         <Button
           variant="outline-danger"
           className="d-flex align-items-center"
-          onClick={handleLogout}
+          onClick={() => void handleLogout()}
         >
           ログアウト
         </Button>
@@ -178,9 +199,18 @@ const NotesPage: React.FC<NotesPageProps> = ({ theme }) => {
       {/* 絞り込み */}
       <NoteFilterPanel filters={filters} onChange={updateFilters} />
 
-      {/* メモリスト（読み込み中はこの領域だけを差し替える） */}
+      <NoteToolbar
+        sort={sort}
+        onSortChange={setSort}
+        summary={summary}
+        due={due}
+        onDueChange={setDue}
+        matchedCount={total}
+      />
+
+      {/* メモリスト */}
       <div className="container">
-        {isLoading || isDeleting ? (
+        {showSpinner ? (
           <div
             className="d-flex justify-content-center align-items-center"
             style={{ minHeight: "40vh" }}
@@ -190,18 +220,27 @@ const NotesPage: React.FC<NotesPageProps> = ({ theme }) => {
             </div>
           </div>
         ) : (
-          <NoteList
-            notes={visibleNotes}
-            totalCount={notes.length}
-            tags={tags}
-            searchQuery={deferredQuery}
-            onEdit={setEditingNote}
-            onDelete={handleDeleteNote}
-            onTagClick={handleTagClick}
-            onToggleImportant={toggleImportant}
-            onTogglePinned={togglePinned}
-            onToggleCompleted={toggleCompleted}
-          />
+          <>
+            <NoteList
+              notes={notes}
+              totalCount={summary.total}
+              tags={tags}
+              searchQuery={debouncedQuery}
+              onEdit={setEditingNote}
+              onDelete={handleDeleteNote}
+              onTagClick={handleTagClick}
+              onToggleImportant={toggleImportant}
+              onTogglePinned={togglePinned}
+              onToggleCompleted={toggleCompleted}
+            />
+            {hasMore && (
+              <div className="text-center mb-4">
+                <Button variant="outline-primary" onClick={loadMore} disabled={isLoading}>
+                  {isLoading ? "読み込み中..." : `もっと見る（残り ${total - notes.length}件）`}
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

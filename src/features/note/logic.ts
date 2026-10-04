@@ -1,8 +1,11 @@
 import {
   DeadlineStatus,
+  DueFilter,
   Note,
   NoteFilterCriteria,
   NoteFilterOptions,
+  NoteQuery,
+  NoteSort,
 } from "features/note/types/types";
 
 /** メモそのものが持つ、UI にも API にも依存しない判断ロジック */
@@ -107,3 +110,45 @@ export const compareByPriority = (a: Note, b: Note): number => {
 
 export const sortByPriority = (notes: Note[]): Note[] =>
   [...notes].sort(compareByPriority);
+
+/**
+ * 完了状態のスイッチ（完了済み・未完了）をサーバの completed 引数に変換する。
+ * 片方だけ ON ならそれに絞り、両方 ON・両方 OFF は絞り込まない（以前の画面と同じ扱い）。
+ */
+export const completedFilterOf = (options: NoteFilterOptions): boolean | undefined => {
+  const { includeCompleted, includeUncompleted } = options;
+  if (includeCompleted === includeUncompleted) return undefined;
+  return includeCompleted;
+};
+
+/** 画面の絞り込み状態をサーバに渡す検索条件にまとめる */
+export const toNoteQuery = (
+  options: NoteFilterOptions,
+  keyword: string,
+  sort: NoteSort,
+  due?: DueFilter
+): NoteQuery => ({
+  keyword,
+  tags: options.tags,
+  onlyPinned: options.onlyPinned,
+  onlyImportant: options.onlyImportant,
+  completed: completedFilterOf(options),
+  due,
+  sort,
+});
+
+/** ゴミ箱の保持日数（サーバの app.trash.retention-days と同じ） */
+export const TRASH_RETENTION_DAYS = 30;
+
+/**
+ * ゴミ箱のメモが自動で完全に削除されるまでの日数（切り上げ）。
+ * 削除日時を持たないメモ（古いサーバの応答）は null。
+ */
+export const daysUntilPurge = (
+  deletedAt: string | undefined,
+  now: Date = new Date()
+): number | null => {
+  if (!deletedAt) return null;
+  const purgeAt = new Date(deletedAt).getTime() + TRASH_RETENTION_DAYS * ONE_DAY_MS;
+  return Math.ceil((purgeAt - now.getTime()) / ONE_DAY_MS);
+};

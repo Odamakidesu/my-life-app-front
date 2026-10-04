@@ -6,13 +6,18 @@ import {
   deadlineStatusOf,
   tagNamesOf,
 } from "features/note/logic";
-import { Note } from "features/note/types/types";
 import {
   colorOfTagName,
   textColorForBackground,
 } from "features/tag/logic";
 import { Tag } from "features/tag/types/types";
 import HighlightedText from "shared/components/HighlightedText";
+import MarkdownText from "shared/components/MarkdownText";
+import { RECURRENCE_OPTIONS } from "features/note/types/schema";
+import { Note, Recurrence } from "features/note/types/types";
+
+const recurrenceLabelOf = (recurrence: Recurrence): string =>
+  RECURRENCE_OPTIONS.find((option) => option.value === recurrence)?.label ?? recurrence;
 
 type NoteCardProps = {
   note: Note;
@@ -68,9 +73,19 @@ const NoteCard: React.FC<NoteCardProps> = ({
         >
           📝 <HighlightedText text={note.title} query={searchQuery} />
         </Card.Title>
-        <Card.Text>
-          <HighlightedText text={note.content} query={searchQuery} />
-        </Card.Text>
+        {/*
+          検索中は一致箇所を強調するため、Markdown として整形せずに本文をそのまま出す。
+          強調と Markdown の整形を同時に行うと、記法の途中に強調が入り込んで崩れる。
+        */}
+        <div className="note-content mb-3">
+          {searchQuery ? (
+            <div style={{ whiteSpace: "pre-wrap" }}>
+              <HighlightedText text={note.content} query={searchQuery} />
+            </div>
+          ) : (
+            <MarkdownText text={note.content} />
+          )}
+        </div>
 
         {/* タグ表示部分 */}
         <div className="mb-2">
@@ -101,7 +116,12 @@ const NoteCard: React.FC<NoteCardProps> = ({
         </div>
 
         {/* 締切 */}
-        <div className="mt-2" style={{ minHeight: "1.8rem" }}>
+        <div className="mt-2 d-flex flex-wrap gap-1" style={{ minHeight: "1.8rem" }}>
+          {note.recurrence && (
+            <span className="badge bg-info text-dark" title="完了にすると次回分が作られます">
+              🔁 {recurrenceLabelOf(note.recurrence)}
+            </span>
+          )}
           {note.deadline ? (
             <span
               className={`badge ${

@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { format } from "date-fns-tz";
 import { parseISO } from "date-fns";
 import { useTrash } from "features/note/hooks/useTrash";
-import { tagNamesOf } from "features/note/logic";
+import { daysUntilPurge, tagNamesOf, TRASH_RETENTION_DAYS } from "features/note/logic";
 import { NoteId } from "features/note/types/types";
 import { ThemeName } from "shared/types/theme";
 import ToastNotifier from "shared/components/ToastNotifier";
@@ -17,10 +17,18 @@ type TrashPageProps = {
 const formatDateTime = (value: string): string =>
   format(parseISO(value), "yyyy/MM/dd HH:mm");
 
+/** 自動削除までの日数の表示 */
+const purgeNoticeOf = (deletedAt: string | undefined, now: Date): string | null => {
+  const days = daysUntilPurge(deletedAt, now);
+  if (days === null) return null;
+  return days <= 0 ? "まもなく自動的に削除されます" : `あと${days}日で自動的に削除されます`;
+};
+
 /** ゴミ箱画面。削除したメモの復元と完全削除を行う */
 const TrashPage: React.FC<TrashPageProps> = ({ theme }) => {
   const { message, variant, isVisible, showToast, hideToast } = useToast();
   const { notes, isLoading, restore, deletePermanently } = useTrash(showToast);
+  const now = new Date();
 
   const handleDeletePermanently = useCallback(
     async (id: NoteId) => {
@@ -33,7 +41,12 @@ const TrashPage: React.FC<TrashPageProps> = ({ theme }) => {
   return (
     <div className="container mt-4" data-bs-theme={theme}>
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="mb-0">ゴミ箱</h2>
+        <div>
+          <h2 className="mb-0">ゴミ箱</h2>
+          <p className="small text-body-secondary mb-0">
+            ゴミ箱のメモは{TRASH_RETENTION_DAYS}日たつと自動的に完全に削除されます。
+          </p>
+        </div>
         <Link to="/notes" className="btn btn-outline-primary">
           メモ一覧へ戻る
         </Link>
@@ -65,7 +78,11 @@ const TrashPage: React.FC<TrashPageProps> = ({ theme }) => {
                   )}
                   <p className="small text-muted mb-0">
                     作成: {formatDateTime(note.createdAt)}
+                    {note.deletedAt && <> ／ 削除: {formatDateTime(note.deletedAt)}</>}
                   </p>
+                  {purgeNoticeOf(note.deletedAt, now) && (
+                    <p className="small text-danger mb-0">{purgeNoticeOf(note.deletedAt, now)}</p>
+                  )}
                 </Card.Body>
                 <Card.Footer className="d-flex justify-content-end gap-2">
                   <Button

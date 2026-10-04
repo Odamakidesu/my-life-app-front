@@ -1,3 +1,5 @@
+import { AdminService } from "features/admin/services/AdminService";
+import { AdminRepository } from "features/admin/types/types";
 import { AuthService } from "features/auth/services/AuthService";
 import { NoteService } from "features/note/services/NoteService";
 import { TagService } from "features/tag/services/TagService";
@@ -6,6 +8,7 @@ import { TokenStorage } from "features/auth/types/types";
 import { NoteRepository } from "features/note/types/types";
 import { TagRepository } from "features/tag/types/types";
 import { httpClient } from "infrastructure/http/httpClient";
+import { AdminApiRepository } from "infrastructure/repositories/AdminApiRepository";
 import { AuthApiRepository } from "infrastructure/repositories/AuthApiRepository";
 import { NoteApiRepository } from "infrastructure/repositories/NoteApiRepository";
 import { TagApiRepository } from "infrastructure/repositories/TagApiRepository";
@@ -20,7 +23,9 @@ export const tokenStorage: TokenStorage = localStorageTokenStorage;
 const noteRepository: NoteRepository = new NoteApiRepository(httpClient);
 const tagRepository: TagRepository = new TagApiRepository(httpClient);
 const authRepository: AuthRepository = new AuthApiRepository(httpClient);
+const adminRepository: AdminRepository = new AdminApiRepository(httpClient);
 
 export const noteService = new NoteService(noteRepository);
 export const tagService = new TagService(tagRepository);
 export const authService = new AuthService(authRepository, tokenStorage);
+export const adminService = new AdminService(adminRepository);

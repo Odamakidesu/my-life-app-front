@@ -1,11 +1,12 @@
 import type { Mock } from "vitest";
 import { AxiosInstance } from "axios";
 import { NoteApiRepository } from "infrastructure/repositories/NoteApiRepository";
+import { NoteQuery } from "features/note/types/types";
 
 /**
- * 一覧取得のページング。
+ * 一覧の検索条件の受け渡しと、ゴミ箱のページング。
  *
- * サーバの一覧 API は件数を指定しないと既定値（100 件）で打ち切られる。
+ * ゴミ箱の一覧 API は件数を指定しないと既定値（100 件）で打ち切られる。
  * 1 回だけ要求する実装だと、メモがその数を超えた時点で静かに欠落する。
  * 失敗としては現れないため、これはテストでしか守れない。
  */
@@ -29,74 +30,92 @@ const pageOf = (count: number, startId = 1) =>
 
 const httpOf = (get: Mock) => ({ get } as unknown as AxiosInstance);
 
-describe("NoteApiRepository#findAll", () => {
+const baseQuery: NoteQuery = {
+  keyword: "",
+  tags: [],
+  onlyPinned: false,
+  onlyImportant: false,
+  sort: "PRIORITY",
+};
+
+describe("NoteApiRepository#search", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  test("1ページに収まる場合は1回だけ要求する", async () => {
-    const get = vi.fn().mockResolvedValue({ data: pageOf(3) });
+  test("条件の無い項目は送らず、総数は X-Total-Count から読む", async () => {
+    const get = vi.fn().mockResolvedValue({
+      data: pageOf(3),
+      headers: { "x-total-count": "120" },
+    });
 
-    const notes = await new NoteApiRepository(httpOf(get)).findAll();
+    const result = await new NoteApiRepository(httpOf(get)).search(baseQuery, 0, 50);
 
-    expect(notes).toHaveLength(3);
-    expect(get).toHaveBeenCalledTimes(1);
     expect(get).toHaveBeenCalledWith("/notes", {
-      params: { page: 0, size: PAGE_SIZE },
+      params: { page: 0, size: 50, sort: "PRIORITY" },
+    });
+    expect(result.notes).toHaveLength(3);
+    expect(result.total).toBe(120);
+  });
+
+  test("検索語・タグ・各フラグ・締切の条件をサーバの引数名で送る", async () => {
+    const get = vi.fn().mockResolvedValue({ data: [], headers: {} });
+
+    await new NoteApiRepository(httpOf(get)).search(
+      {
+        keyword: "  会議 ",
+        tags: ["仕事", "勉強"],
+        onlyPinned: true,
+        onlyImportant: true,
+        completed: false,
+        due: "OVERDUE",
+        sort: "DEADLINE",
+      },
+      2,
+      50
+    );
+
+    expect(get).toHaveBeenCalledWith("/notes", {
+      params: {
+        page: 2,
+        size: 50,
+        sort: "DEADLINE",
+        q: "会議",
+        tags: "仕事,勉強",
+        pinned: true,
+        important: true,
+        completed: false,
+        due: "OVERDUE",
+      },
     });
   });
 
-  test("満杯のページが返る間は次のページを取りに行き、全件を返す", async () => {
-    const get = vi
-      .fn()
-      .mockResolvedValueOnce({ data: pageOf(PAGE_SIZE, 1) })
-      .mockResolvedValueOnce({ data: pageOf(PAGE_SIZE, PAGE_SIZE + 1) })
-      .mockResolvedValueOnce({ data: pageOf(7, PAGE_SIZE * 2 + 1) });
+  test("X-Total-Count が無ければ受け取った件数を総数とする", async () => {
+    const get = vi.fn().mockResolvedValue({ data: pageOf(2), headers: {} });
 
-    const notes = await new NoteApiRepository(httpOf(get)).findAll();
+    const result = await new NoteApiRepository(httpOf(get)).search(baseQuery, 0, 50);
 
-    expect(notes).toHaveLength(PAGE_SIZE * 2 + 7);
-    expect(get).toHaveBeenCalledTimes(3);
-    expect(get).toHaveBeenNthCalledWith(2, "/notes", {
-      params: { page: 1, size: PAGE_SIZE },
-    });
-    expect(get).toHaveBeenNthCalledWith(3, "/notes", {
-      params: { page: 2, size: PAGE_SIZE },
-    });
-    // 取得順（=サーバの並び順）が保たれていること
-    expect(notes[0].id).toBe(1);
-    expect(notes[notes.length - 1].id).toBe(PAGE_SIZE * 2 + 7);
-  });
-
-  test("ちょうど1ページ分だった場合は空ページを1回だけ確認して終わる", async () => {
-    const get = vi
-      .fn()
-      .mockResolvedValueOnce({ data: pageOf(PAGE_SIZE) })
-      .mockResolvedValueOnce({ data: [] });
-
-    const notes = await new NoteApiRepository(httpOf(get)).findAll();
-
-    expect(notes).toHaveLength(PAGE_SIZE);
-    expect(get).toHaveBeenCalledTimes(2);
-  });
-
-  test("常に満杯が返り続けても上限で打ち切り、警告を残す", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const get = vi.fn().mockResolvedValue({ data: pageOf(PAGE_SIZE) });
-
-    const notes = await new NoteApiRepository(httpOf(get)).findAll();
-
-    // 無限に要求し続けてブラウザを固めないこと
-    expect(get).toHaveBeenCalledTimes(50);
-    expect(notes).toHaveLength(PAGE_SIZE * 50);
-    expect(warn).toHaveBeenCalled();
+    expect(result.total).toBe(2);
   });
 
   test("取得に失敗した場合は例外を伝播させる", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const get = vi.fn().mockRejectedValue(new Error("boom"));
 
-    await expect(new NoteApiRepository(httpOf(get)).findAll()).rejects.toThrow(
-      "boom"
-    );
+    await expect(
+      new NoteApiRepository(httpOf(get)).search(baseQuery, 0, 50)
+    ).rejects.toThrow("boom");
+  });
+});
+
+describe("NoteApiRepository#updateCompleted", () => {
+  test("繰り返しで作られた次回分の ID を返し、本文の無い応答（古いサーバ）は null にする", async () => {
+    const put = vi
+      .fn()
+      .mockResolvedValueOnce({ data: { nextNoteId: 42 } })
+      .mockResolvedValueOnce({ data: "" });
+    const repository = new NoteApiRepository({ put } as unknown as AxiosInstance);
+
+    await expect(repository.updateCompleted(1, true)).resolves.toBe(42);
+    await expect(repository.updateCompleted(1, true)).resolves.toBeNull();
   });
 });
 
@@ -110,6 +129,7 @@ describe("NoteApiRepository#create", () => {
       content: "本文",
       tags: "仕事",
       deadline: null,
+      recurrence: "WEEKLY",
     });
 
     expect(post).toHaveBeenCalledWith("/notes", {
@@ -117,6 +137,7 @@ describe("NoteApiRepository#create", () => {
       content: "本文",
       tags: "仕事",
       deadline: null,
+      recurrence: "WEEKLY",
     });
     const payload = post.mock.calls[0][1];
     expect(payload).not.toHaveProperty("id");

@@ -100,3 +100,38 @@ mark.custom-highlight {
   transform: translateX(24px);
   background-color: #444;
 }
+
+/* メモ本文の Markdown。カードの中で見出しが大きくなりすぎないようにする */
+.note-markdown {
+  overflow-wrap: anywhere;
+}
+.note-markdown h1,
+.note-markdown h2,
+.note-markdown h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.note-markdown p:last-child,
+.note-markdown ul:last-child,
+.note-markdown ol:last-child {
+  margin-bottom: 0;
+}
+.note-markdown pre {
+  background: var(--bs-secondary-bg);
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+}
+.note-markdown table {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+.note-markdown th,
+.note-markdown td {
+  border: 1px solid var(--bs-border-color);
+  padding: 0.125rem 0.375rem;
+}
+/* 長い本文はカードの高さを揃えるため、この中だけスクロールさせる */
+.note-content {
+  max-height: 16rem;
+  overflow-y: auto;
+}

@@ -8,11 +8,18 @@ import { z } from "zod";
 
 export const TITLE_MAX_LENGTH = 50;
 /**
- * 本文の上限。保存先の note.content が VARCHAR(255) のため、
- * ここを超える値を通すと画面では検証に通ったのに保存側で失われる。
- * DB の定義を変更する場合は必ず両方を合わせること。
+ * 本文の上限。サーバの NoteLimits.CONTENT_MAX_LENGTH（note.content は TEXT）と揃えてある。
+ * どちらかだけを変えると、画面では検証に通ったのに保存で 400 になる（またはその逆）。
  */
-export const CONTENT_MAX_LENGTH = 255;
+export const CONTENT_MAX_LENGTH = 10000;
+
+/** 繰り返しの選択肢。空文字は「繰り返さない」 */
+export const RECURRENCE_OPTIONS = [
+  { value: "", label: "繰り返さない" },
+  { value: "DAILY", label: "毎日" },
+  { value: "WEEKLY", label: "毎週" },
+  { value: "MONTHLY", label: "毎月" },
+] as const;
 
 export const noteInputSchema = z.object({
   title: z
@@ -28,6 +35,11 @@ export const noteInputSchema = z.object({
   tags: z.array(z.string().trim().min(1)),
   /** datetime-local の値。未設定なら空文字 */
   deadline: z.string(),
+  /** 繰り返しの間隔。空文字は繰り返さない */
+  recurrence: z.enum(["", "DAILY", "WEEKLY", "MONTHLY"]),
+}).refine((input) => input.recurrence === "" || input.deadline !== "", {
+  message: "繰り返すには締切を入力してください",
+  path: ["recurrence"],
 });
 
 /** 検証済みのメモ入力値 */
@@ -39,6 +51,7 @@ export const emptyNoteInput: NoteInput = {
   content: "",
   tags: [],
   deadline: "",
+  recurrence: "",
 };
 
 /** ドメインの入力規則に反したことを表す例外 */

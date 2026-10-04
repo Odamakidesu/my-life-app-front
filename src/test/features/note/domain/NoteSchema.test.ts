@@ -11,6 +11,7 @@ const validInput = {
   content: "資料を作成する",
   tags: ["仕事"],
   deadline: "",
+  recurrence: "" as const,
 };
 
 describe("noteInputSchema", () => {
@@ -60,5 +61,31 @@ describe("parseNoteInput", () => {
     expect(() => parseNoteInput({ ...validInput, content: "" })).toThrow(
       "本文を入力してください"
     );
+  });
+});
+
+describe("繰り返し", () => {
+  test("締切があれば繰り返しを設定できる", () => {
+    expect(
+      noteInputSchema.safeParse({
+        ...validInput,
+        deadline: "2026-12-31T09:00",
+        recurrence: "WEEKLY",
+      }).success
+    ).toBe(true);
+  });
+
+  test("締切の無い繰り返しは弾く", () => {
+    const result = noteInputSchema.safeParse({ ...validInput, recurrence: "DAILY" });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["recurrence"]);
+  });
+
+  test("本文は10000文字まで受け付ける", () => {
+    expect(
+      noteInputSchema.safeParse({ ...validInput, content: "あ".repeat(CONTENT_MAX_LENGTH) }).success
+    ).toBe(true);
+    expect(CONTENT_MAX_LENGTH).toBe(10000);
   });
 });

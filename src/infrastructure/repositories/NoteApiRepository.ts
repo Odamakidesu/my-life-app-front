@@ -1,76 +1,132 @@
 import { AxiosInstance } from "axios";
-import { NewNote, Note, NoteEdit, NoteId } from "features/note/types/types";
-import { NoteRepository } from "features/note/types/types";
 import {
+  ExportFormat,
+  ExportedFile,
+  NewNote,
+  Note,
+  NoteEdit,
+  NoteId,
+  NotePage,
+  NoteQuery,
+  NoteRepository,
+  NoteSummary,
+} from "features/note/types/types";
+import {
+  parseNextNoteId,
   parseNote,
   parseNoteList,
+  parseNoteSummary,
 } from "infrastructure/repositories/schemas/noteApiSchema";
 import { describeError } from "shared/logging/describeError";
 
 const RESOURCE = "/notes";
 
 /**
- * 1 回の要求で取得する件数。サーバ側の上限（MAX_PAGE_SIZE）と揃えてある。
+ * ゴミ箱を取得するときの 1 回の件数。サーバ側の上限（MAX_PAGE_SIZE）と揃えてある。
  * これを超える値を送っても、サーバが上限側へ丸めるだけで例外にはならない。
  */
-const PAGE_SIZE = 500;
+const TRASH_PAGE_SIZE = 500;
 
 /**
- * 取得を打ち切るページ数の上限。
+ * ゴミ箱の取得を打ち切るページ数の上限。
  * サーバの応答が想定と異なり常に満杯のページを返した場合に、
  * 無限に要求し続けてブラウザを固めるのを防ぐための安全弁。
  */
 const MAX_PAGES = 50;
 
+/** 検索条件を一覧 API のクエリ文字列に変換する（未指定の項目は送らない） */
+export const toSearchParams = (
+  query: NoteQuery,
+  page: number,
+  size: number
+): Record<string, string | number | boolean> => {
+  const params: Record<string, string | number | boolean> = {
+    page,
+    size,
+    sort: query.sort,
+  };
+  const keyword = query.keyword.trim();
+  if (keyword) params.q = keyword;
+  if (query.tags.length > 0) params.tags = query.tags.join(",");
+  if (query.onlyPinned) params.pinned = true;
+  if (query.onlyImportant) params.important = true;
+  if (query.completed !== undefined) params.completed = query.completed;
+  if (query.due) params.due = query.due;
+  return params;
+};
+
+/** 応答の X-Total-Count。無ければ受け取った件数を総数とみなす */
+const totalCountOf = (headers: unknown, fallback: number): number => {
+  const raw = (headers as Record<string, unknown> | undefined)?.["x-total-count"];
+  const total = Number(raw);
+  return raw !== undefined && Number.isFinite(total) ? total : fallback;
+};
+
 /** REST API を用いた NoteRepository の実装 */
 export class NoteApiRepository implements NoteRepository {
   constructor(private readonly http: AxiosInstance) {}
 
-  /**
-   * 自分のメモを全件取得する。
-   *
-   * サーバの一覧 API はページングされており、件数を指定しないと既定値
-   * （100 件）で打ち切られる。1 回だけ要求する実装だと、メモがその数を
-   * 超えた時点で古いものが画面から静かに消える。エラーにはならないため
-   * 気づきようがない。ここで最後のページまで辿り切る。
-   */
-  async findAll(): Promise<Note[]> {
+  async search(query: NoteQuery, page: number, size: number): Promise<NotePage> {
     try {
-      return await this.fetchAllPages(RESOURCE);
+      const response = await this.http.get(RESOURCE, {
+        params: toSearchParams(query, page, size),
+      });
+      const notes = parseNoteList(response.data);
+      return { notes, total: totalCountOf(response.headers, notes.length) };
     } catch (error) {
       console.error("メモ一覧取得エラー", describeError(error));
       throw error;
     }
   }
 
-  /** ゴミ箱のメモを全件取得する。ページングの扱いは findAll と同じ */
-  async findDeleted(): Promise<Note[]> {
+  async summarize(): Promise<NoteSummary> {
     try {
-      return await this.fetchAllPages(`${RESOURCE}/deleted`);
+      const response = await this.http.get(`${RESOURCE}/summary`);
+      return parseNoteSummary(response.data);
     } catch (error) {
-      console.error("ゴミ箱の取得エラー", describeError(error));
+      console.error("メモの集計の取得エラー", describeError(error));
       throw error;
     }
   }
 
-  private async fetchAllPages(path: string): Promise<Note[]> {
-    const notes: Note[] = [];
-
-    for (let page = 0; page < MAX_PAGES; page += 1) {
-      const response = await this.http.get(path, {
-        params: { page, size: PAGE_SIZE },
+  async exportAll(format: ExportFormat): Promise<ExportedFile> {
+    try {
+      const response = await this.http.get(`${RESOURCE}/export`, {
+        params: { format },
+        responseType: "blob",
       });
-      const batch = parseNoteList(response.data);
-      notes.push(...batch);
-
-      // 満杯でなければ最後のページ
-      if (batch.length < PAGE_SIZE) return notes;
+      const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+      return {
+        fileName: `mylifeapp-notes-${date}.${format}`,
+        content: response.data as Blob,
+      };
+    } catch (error) {
+      console.error("エクスポートエラー", describeError(error));
+      throw error;
     }
+  }
 
-    console.warn(
-      `${path} の取得が上限ページ数(${MAX_PAGES})に達しました。以降は取得していません`
-    );
-    return notes;
+  /** ゴミ箱のメモを全件取得する（件数は多くならない想定なので最後のページまで辿る） */
+  async findDeleted(): Promise<Note[]> {
+    try {
+      const notes: Note[] = [];
+      for (let page = 0; page < MAX_PAGES; page += 1) {
+        const response = await this.http.get(`${RESOURCE}/deleted`, {
+          params: { page, size: TRASH_PAGE_SIZE },
+        });
+        const batch = parseNoteList(response.data);
+        notes.push(...batch);
+        // 満杯でなければ最後のページ
+        if (batch.length < TRASH_PAGE_SIZE) return notes;
+      }
+      console.warn(
+        `ゴミ箱の取得が上限ページ数(${MAX_PAGES})に達しました。以降は取得していません`
+      );
+      return notes;
+    } catch (error) {
+      console.error("ゴミ箱の取得エラー", describeError(error));
+      throw error;
+    }
   }
 
   async create(note: NewNote): Promise<Note> {
@@ -81,6 +137,7 @@ export class NoteApiRepository implements NoteRepository {
         content: note.content,
         tags: note.tags,
         deadline: note.deadline,
+        recurrence: note.recurrence,
       });
       return parseNote(response.data);
     } catch (error) {
@@ -96,6 +153,7 @@ export class NoteApiRepository implements NoteRepository {
         content: note.content,
         tags: note.tags,
         deadline: note.deadline,
+        recurrence: note.recurrence,
       });
     } catch (error) {
       console.error("メモ更新エラー", describeError(error));
@@ -123,11 +181,12 @@ export class NoteApiRepository implements NoteRepository {
     }
   }
 
-  async updateCompleted(id: NoteId, isCompleted: boolean): Promise<void> {
+  async updateCompleted(id: NoteId, isCompleted: boolean): Promise<NoteId | null> {
     try {
-      await this.http.put(`${RESOURCE}/${id}/completed`, {
+      const response = await this.http.put(`${RESOURCE}/${id}/completed`, {
         completed: isCompleted,
       });
+      return parseNextNoteId(response.data);
     } catch (error) {
       console.error("完了フラグ更新エラー", describeError(error));
       throw error;
