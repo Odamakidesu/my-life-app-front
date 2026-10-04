@@ -51,6 +51,7 @@ test("入力が揃っていれば正規化された値で送信される", async
       content: "資料を作成する",
       tags: [],
       deadline: "",
+      recurrence: "",
     })
   );
 });
@@ -85,6 +86,7 @@ test("編集モードでは変更するまで保存できない", async () => {
         content: "資料を作成する",
         tags: [],
         deadline: "",
+        recurrence: "",
       }}
       tags={[]}
       onSubmit={vi.fn()}

@@ -47,3 +47,53 @@ export const emptyRegistration: Registration = {
   password: "",
   passwordConfirmation: "",
 };
+
+/**
+ * パスワード変更の入力に対する検証ルール。新しいパスワードの規則は登録時と同じ。
+ * 現在のパスワードとの一致はサーバだけが確かめられる。
+ */
+export const passwordChangeSchema = z
+  .object({
+    currentPassword: z.string().min(1, "現在のパスワードを入力してください"),
+    newPassword: z
+      .string()
+      .min(12, "パスワードは12文字以上128文字以内で入力してください")
+      .max(128, "パスワードは12文字以上128文字以内で入力してください"),
+    newPasswordConfirmation: z.string().min(1, "確認用のパスワードを入力してください"),
+  })
+  .refine((value) => value.newPassword === value.newPasswordConfirmation, {
+    message: "パスワードが一致しません",
+    path: ["newPasswordConfirmation"],
+  })
+  .refine((value) => value.newPassword !== value.currentPassword, {
+    message: "新しいパスワードは現在のパスワードと別のものにしてください",
+    path: ["newPassword"],
+  });
+
+export type PasswordChangeInput = z.infer<typeof passwordChangeSchema>;
+
+export const emptyPasswordChange: PasswordChangeInput = {
+  currentPassword: "",
+  newPassword: "",
+  newPasswordConfirmation: "",
+};
+
+/** パスワード変更の入力が規則に反したことを表す例外 */
+export class PasswordChangeValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PasswordChangeValidationError";
+    Object.setPrototypeOf(this, PasswordChangeValidationError.prototype);
+  }
+}
+
+/** @throws PasswordChangeValidationError */
+export const parsePasswordChange = (input: unknown): PasswordChangeInput => {
+  const result = passwordChangeSchema.safeParse(input);
+  if (!result.success) {
+    throw new PasswordChangeValidationError(
+      result.error.issues[0]?.message ?? "入力内容が正しくありません"
+    );
+  }
+  return result.data;
+};

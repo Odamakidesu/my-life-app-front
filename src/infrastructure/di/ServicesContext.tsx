@@ -1,8 +1,14 @@
 import React, { createContext, useContext, useMemo } from "react";
+import { AdminService } from "features/admin/services/AdminService";
 import { AuthService } from "features/auth/services/AuthService";
 import { NoteService } from "features/note/services/NoteService";
 import { TagService } from "features/tag/services/TagService";
-import { authService, noteService, tagService } from "infrastructure/di/container";
+import {
+  adminService,
+  authService,
+  noteService,
+  tagService,
+} from "infrastructure/di/container";
 
 /**
  * アプリケーションサービスの供給口。
@@ -13,13 +19,14 @@ import { authService, noteService, tagService } from "infrastructure/di/containe
  * 「どの実装を使うか」を知るのは合成ルートと Provider だけになる。
  */
 export type Services = {
+  adminService: AdminService;
   authService: AuthService;
   noteService: NoteService;
   tagService: TagService;
 };
 
 /** 既定値は合成ルートが組み立てた本番実装 */
-const defaultServices: Services = { authService, noteService, tagService };
+const defaultServices: Services = { adminService, authService, noteService, tagService };
 
 const ServicesContext = createContext<Services>(defaultServices);
 

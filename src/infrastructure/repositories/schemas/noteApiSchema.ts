@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Note } from "features/note/types/types";
+import { Note, NoteId, NoteSummary } from "features/note/types/types";
 
 /**
  * API が返すメモの形。
@@ -22,6 +22,9 @@ const noteApiSchema = z
     isPinned: z.boolean().nullish(),
     isCompleted: z.boolean().nullish(),
     deadline: z.string().nullish(),
+    // 古いサーバは返さない。知らない値は「繰り返さない」として扱い、画面ごと落とさない
+    recurrence: z.enum(["DAILY", "WEEKLY", "MONTHLY"]).nullish().catch(null),
+    deleted_at: z.string().nullish(),
   })
   .transform(
     (dto): Note => ({
@@ -34,6 +37,8 @@ const noteApiSchema = z
       isPinned: dto.isPinned ?? undefined,
       isCompleted: dto.isCompleted ?? undefined,
       deadline: dto.deadline ?? undefined,
+      recurrence: dto.recurrence ?? undefined,
+      deletedAt: dto.deleted_at ?? undefined,
     })
   );
 
@@ -64,3 +69,26 @@ export const parseNoteList = (data: unknown): Note[] => {
   }
   return result.data;
 };
+
+const summaryApiSchema = z.object({
+  total: z.number(),
+  overdue: z.number(),
+  dueSoon: z.number(),
+});
+
+export const parseNoteSummary = (data: unknown): NoteSummary => {
+  const result = summaryApiSchema.safeParse(data);
+  if (!result.success) {
+    throw new NoteResponseError("メモの集計の応答が想定した形式ではありません");
+  }
+  return result.data;
+};
+
+/** 完了状態の更新の応答。以前のサーバは本文を返さないので、その場合は「次回分なし」とみなす */
+const completedApiSchema = z
+  .object({ nextNoteId: z.number().nullish() })
+  .nullish()
+  .catch(null);
+
+export const parseNextNoteId = (data: unknown): NoteId | null =>
+  completedApiSchema.parse(data)?.nextNoteId ?? null;

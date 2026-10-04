@@ -4,6 +4,8 @@ import { ThemeName } from "shared/types/theme";
 import RequireAuth from "features/auth/components/RequireAuth";
 import LoginPage from "features/auth";
 import RegisterPage from "features/auth/RegisterPage";
+import AccountPage from "features/auth/AccountPage";
+import AdminPage from "features/admin";
 import NotesPage from "features/note";
 import TrashPage from "features/note/TrashPage";
 import TagsPage from "features/tag";
@@ -38,6 +40,22 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ theme }) => (
       element={
         <RequireAuth>
           <TagsPage theme={theme} />
+        </RequireAuth>
+      }
+    />
+    <Route
+      path="/account"
+      element={
+        <RequireAuth>
+          <AccountPage theme={theme} />
+        </RequireAuth>
+      }
+    />
+    <Route
+      path="/admin"
+      element={
+        <RequireAuth>
+          <AdminPage theme={theme} />
         </RequireAuth>
       }
     />

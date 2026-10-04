@@ -7,6 +7,7 @@ import { Note } from "features/note/types/types";
 import {
   CONTENT_MAX_LENGTH,
   NoteInput,
+  RECURRENCE_OPTIONS,
   TITLE_MAX_LENGTH,
   emptyNoteInput,
   noteInputSchema,
@@ -62,6 +63,7 @@ export const toNoteInput = (note: Note): NoteInput => ({
   content: note.content,
   tags: tagNamesOf(note),
   deadline: note.deadline ?? "",
+  recurrence: note.recurrence ?? "",
 });
 
 /**
@@ -133,6 +135,23 @@ const NoteForm: React.FC<NoteFormProps> = ({
           {errors.deadline && (
             <div className="invalid-feedback">{errors.deadline.message}</div>
           )}
+          <select
+            id="note-recurrence"
+            aria-label="繰り返し"
+            className={`form-select form-select-sm mt-2 ${
+              errors.recurrence ? "is-invalid" : ""
+            }`}
+            {...register("recurrence")}
+          >
+            {RECURRENCE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                🔁 {option.label}
+              </option>
+            ))}
+          </select>
+          {errors.recurrence && (
+            <div className="invalid-feedback">{errors.recurrence.message}</div>
+          )}
         </div>
 
         <div className="col-md-4">
@@ -186,8 +205,8 @@ const NoteForm: React.FC<NoteFormProps> = ({
           <textarea
             id="note-content"
             className={`form-control ${errors.content ? "is-invalid" : ""}`}
-            rows={3}
-            placeholder="メモを入力"
+            rows={5}
+            placeholder="メモを入力（Markdown が使えます）"
             {...register("content")}
           />
           {errors.content && (

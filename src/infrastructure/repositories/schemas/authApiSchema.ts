@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AuthToken } from "features/auth/types/types";
+import { AuthToken, CurrentUser } from "features/auth/types/types";
 
 /**
  * ログイン応答の形。
@@ -28,4 +28,19 @@ export const parseLoginResponse = (data: unknown): AuthToken => {
     throw new AuthResponseError("ログイン応答にトークンが含まれていません");
   }
   return result.data.token;
+};
+
+const currentUserSchema = z.object({
+  id: z.number(),
+  username: z.string(),
+  // 知らない権限は一般ユーザーとして扱う（管理画面への入口を誤って出さない）
+  role: z.enum(["USER", "ADMIN"]).catch("USER"),
+});
+
+export const parseCurrentUser = (data: unknown): CurrentUser => {
+  const result = currentUserSchema.safeParse(data);
+  if (!result.success) {
+    throw new AuthResponseError("利用者情報の応答が想定した形式ではありません");
+  }
+  return result.data;
 };
