@@ -2,12 +2,20 @@
 import { fileURLToPath, URL } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { legacyProcessEnvWarning, migrateLegacyEnv } from "./config/migrateLegacyEnv";
 
 /** `src` 直下のディレクトリを起点にした絶対インポート（tsconfig.json の paths と対応） */
 const srcAlias = (dir: string) => ({
   find: new RegExp(`^${dir}/`),
   replacement: fileURLToPath(new URL(`./src/${dir}/`, import.meta.url)),
 });
+
+// CRA 時代の REACT_APP_* が手元の .env.*local に残っていたら、Vite が env を読む前に改名する
+for (const file of migrateLegacyEnv(fileURLToPath(new URL(".", import.meta.url)))) {
+  console.warn(`[env] ${file} の REACT_APP_API_BASE_URL を VITE_API_BASE_URL に書き換えました`);
+}
+const envWarning = legacyProcessEnvWarning(process.env);
+if (envWarning) console.warn(`[env] ${envWarning}`);
 
 export default defineConfig({
   plugins: [react()],

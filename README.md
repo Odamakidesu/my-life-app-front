@@ -116,8 +116,10 @@ npm start   # = vite。http://localhost:5173 で起動
 接続先は環境変数 `VITE_API_BASE_URL`（末尾の `/api` まで含める）で決まります。
 Vite がクライアントに埋め込むのは `VITE_` で始まる変数だけで、コードからは
 `import.meta.env.VITE_API_BASE_URL` で参照します（型は `src/vite-env.d.ts`）。
-CRA 時代の `REACT_APP_API_BASE_URL` は読まれないので、手元の `.env.local` などに
-残っている場合は名前を変えてください。
+CRA 時代の `REACT_APP_API_BASE_URL` は Vite では読まれません。手元の `.env.local` などに
+残っている場合は、`npm start` / `npm run build` / `npm test` の起動時に `VITE_API_BASE_URL` へ
+自動で書き換えます（`config/migrateLegacyEnv.ts`。新しい名前が既にあれば古い行をコメントアウト）。
+シェルの環境変数に古い名前を設定している場合は警告だけ出すので、自分で名前を変えてください。
 
 | ファイル | 用途 | コミット |
 |---|---|---|
