@@ -15,7 +15,7 @@ const LOGIN_PATH = "/auth/login";
  * 許可ヘッダは Authorization / Content-Type / Accept に限定されている。
  */
 export const httpClient = axios.create({
-  baseURL: process.env.REACT_APP_API_BASE_URL,
+  baseURL: import.meta.env.VITE_API_BASE_URL,
 });
 
 // すべてのリクエストにトークンを付与（実行時に毎回読み取る）

@@ -28,7 +28,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
 
       - name: Install dependencies
@@ -38,9 +38,7 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Test
-        run: npm test -- --watchAll=false --coverage
-        env:
-          CI: true
+        run: npm test -- --coverage
 
       - name: Upload coverage
         if: always()
@@ -66,22 +64,22 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
 
       - name: Install dependencies
         run: npm ci
 
+      # Vite がクライアントへ埋め込むのは VITE_ で始まる変数だけ。
+      # Secret 名は CRA 時代の REACT_APP_API_BASE_URL のまま据え置き、ビルドが読む変数名だけを変える。
       - name: Create .env.production
         run: |
-          echo "REACT_APP_API_BASE_URL=${{ secrets.REACT_APP_API_BASE_URL }}" > .env.production
+          echo "VITE_API_BASE_URL=${{ secrets.REACT_APP_API_BASE_URL }}" > .env.production
 
-      # CI=false は警告を握り潰す設定で、lint の指摘が出ても気づけなくなる。
-      # 現状は警告ゼロでビルドが通るため、警告をエラーとして扱う既定に戻す。
+      # 出力先は vite.config.ts の build.outDir で ./build に固定している（下の S3 同期が参照する）。
+      # 本番ビルドのソースマップは Vite の既定で出力されない。
       - name: Build
-        run: GENERATE_SOURCEMAP=false npm run build
-        env:
-          CI: true
+        run: npm run build
 
       # TODO(セキュリティ): 静的な長命アクセスキーをやめ、GitHub OIDC のロール引受に移行すること。
       # 移行手順はバックエンドの docs/runbook-security-hardening.md を参照。移行後はここを次に置き換える:

@@ -23,6 +23,7 @@
 # 端末ごとの上書きは .env.local に書く。
 .env
 .env.*
+!.env.development
 
 # 鍵・証明書
 *.pem
