@@ -1,7 +1,7 @@
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useLogin } from "features/auth/hooks/useLogin";
 import {
   Credentials,
@@ -103,6 +103,10 @@ const LoginPage: React.FC = () => {
         >
           ログイン
         </button>
+
+        <p className="text-center mt-3 mb-0">
+          はじめての方は <Link to="/register">新規登録</Link>
+        </p>
       </form>
     </div>
   );

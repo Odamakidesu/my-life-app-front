@@ -63,4 +63,10 @@ export interface NoteRepository {
   updatePinned(id: NoteId, isPinned: boolean): Promise<void>;
   updateCompleted(id: NoteId, isCompleted: boolean): Promise<void>;
   markAsDeleted(id: NoteId): Promise<void>;
+  /** ゴミ箱（論理削除済み）のメモを全件取得する */
+  findDeleted(): Promise<Note[]>;
+  /** ゴミ箱から一覧へ戻す */
+  restore(id: NoteId): Promise<void>;
+  /** ゴミ箱のメモを完全に削除する（ゴミ箱に無いメモはサーバが 404 を返す） */
+  deletePermanently(id: NoteId): Promise<void>;
 }

@@ -47,6 +47,24 @@ export class NoteService {
     await this.repository.markAsDeleted(id);
   }
 
+  /** ゴミ箱のメモを、削除前の作成日時の新しい順で取得する */
+  async listDeleted(): Promise<Note[]> {
+    const notes = await this.repository.findDeleted();
+    return [...notes].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  /** ゴミ箱から一覧へ戻す */
+  async restore(id: NoteId): Promise<void> {
+    await this.repository.restore(id);
+  }
+
+  /** ゴミ箱のメモを完全に削除する（取り消せない） */
+  async deletePermanently(id: NoteId): Promise<void> {
+    await this.repository.deletePermanently(id);
+  }
+
   /** スター（重要フラグ）を切り替える */
   async toggleImportant(note: Note): Promise<void> {
     await this.repository.updateImportant(note.id, !note.isImportant);

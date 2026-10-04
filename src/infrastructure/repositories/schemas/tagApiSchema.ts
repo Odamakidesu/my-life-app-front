@@ -10,6 +10,8 @@ const tagApiSchema = z.object({
   id: z.number(),
   name: z.string(),
   color: z.string(),
+  // 項目追加前のサーバは返さない。その場合は全タグを共通タグ（編集不可）として扱う。
+  editable: z.boolean().default(false),
 });
 
 const tagListApiSchema = z.array(tagApiSchema);
@@ -27,6 +29,14 @@ export const parseTagList = (data: unknown): Tag[] => {
   const result = tagListApiSchema.safeParse(data);
   if (!result.success) {
     throw new TagResponseError("タグ一覧の応答が想定した形式ではありません");
+  }
+  return result.data;
+};
+
+export const parseTag = (data: unknown): Tag => {
+  const result = tagApiSchema.safeParse(data);
+  if (!result.success) {
+    throw new TagResponseError("タグの応答が想定した形式ではありません");
   }
   return result.data;
 };

@@ -138,7 +138,7 @@ export const useNotes = (notify: Notifier) => {
       setIsDeleting(true);
       try {
         await noteService.softDelete(id);
-        notify("メモを削除しました", "success");
+        notify("メモをゴミ箱に移動しました", "success");
         await new Promise((resolve) =>
           setTimeout(resolve, DELETE_ANIMATION_MS)
         );

@@ -36,27 +36,41 @@ export class NoteApiRepository implements NoteRepository {
    */
   async findAll(): Promise<Note[]> {
     try {
-      const notes: Note[] = [];
-
-      for (let page = 0; page < MAX_PAGES; page += 1) {
-        const response = await this.http.get(RESOURCE, {
-          params: { page, size: PAGE_SIZE },
-        });
-        const batch = parseNoteList(response.data);
-        notes.push(...batch);
-
-        // 満杯でなければ最後のページ
-        if (batch.length < PAGE_SIZE) return notes;
-      }
-
-      console.warn(
-        `メモ一覧の取得が上限ページ数(${MAX_PAGES})に達しました。以降は取得していません`
-      );
-      return notes;
+      return await this.fetchAllPages(RESOURCE);
     } catch (error) {
       console.error("メモ一覧取得エラー", describeError(error));
       throw error;
     }
+  }
+
+  /** ゴミ箱のメモを全件取得する。ページングの扱いは findAll と同じ */
+  async findDeleted(): Promise<Note[]> {
+    try {
+      return await this.fetchAllPages(`${RESOURCE}/deleted`);
+    } catch (error) {
+      console.error("ゴミ箱の取得エラー", describeError(error));
+      throw error;
+    }
+  }
+
+  private async fetchAllPages(path: string): Promise<Note[]> {
+    const notes: Note[] = [];
+
+    for (let page = 0; page < MAX_PAGES; page += 1) {
+      const response = await this.http.get(path, {
+        params: { page, size: PAGE_SIZE },
+      });
+      const batch = parseNoteList(response.data);
+      notes.push(...batch);
+
+      // 満杯でなければ最後のページ
+      if (batch.length < PAGE_SIZE) return notes;
+    }
+
+    console.warn(
+      `${path} の取得が上限ページ数(${MAX_PAGES})に達しました。以降は取得していません`
+    );
+    return notes;
   }
 
   async create(note: NewNote): Promise<Note> {
@@ -125,6 +139,24 @@ export class NoteApiRepository implements NoteRepository {
       await this.http.put(`${RESOURCE}/${id}/deleted`, { delete_flg: true });
     } catch (error) {
       console.error("削除更新エラー", describeError(error));
+      throw error;
+    }
+  }
+
+  async restore(id: NoteId): Promise<void> {
+    try {
+      await this.http.put(`${RESOURCE}/${id}/deleted`, { delete_flg: false });
+    } catch (error) {
+      console.error("復元エラー", describeError(error));
+      throw error;
+    }
+  }
+
+  async deletePermanently(id: NoteId): Promise<void> {
+    try {
+      await this.http.delete(`${RESOURCE}/${id}`);
+    } catch (error) {
+      console.error("完全削除エラー", describeError(error));
       throw error;
     }
   }
