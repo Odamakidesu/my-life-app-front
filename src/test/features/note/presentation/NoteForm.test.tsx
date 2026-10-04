@@ -7,7 +7,7 @@ import {
 import NoteForm from "features/note/components/NoteForm";
 
 test("未入力のまま送信するとドメインの検証メッセージが出て、送信されない", async () => {
-  const onSubmit = jest.fn();
+  const onSubmit = vi.fn();
 
   render(
     <NoteForm
@@ -26,7 +26,7 @@ test("未入力のまま送信するとドメインの検証メッセージが�
 });
 
 test("入力が揃っていれば正規化された値で送信される", async () => {
-  const onSubmit = jest.fn().mockResolvedValue(true);
+  const onSubmit = vi.fn().mockResolvedValue(true);
 
   render(
     <NoteForm
@@ -61,7 +61,7 @@ test("入力に応じて文字数カウンターが更新される", async () =>
       mode="create"
       defaultValues={emptyNoteInput}
       tags={[]}
-      onSubmit={jest.fn()}
+      onSubmit={vi.fn()}
     />
   );
 
@@ -87,8 +87,8 @@ test("編集モードでは変更するまで保存できない", async () => {
         deadline: "",
       }}
       tags={[]}
-      onSubmit={jest.fn()}
-      onCancel={jest.fn()}
+      onSubmit={vi.fn()}
+      onCancel={vi.fn()}
     />
   );
 

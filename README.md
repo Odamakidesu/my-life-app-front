@@ -1,6 +1,8 @@
-# Getting Started with Create React App
+# my-life-app-front
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+React + TypeScript のフロントエンドです。開発サーバとビルドは [Vite](https://vite.dev/)、
+テストは [Vitest](https://vitest.dev/)（jsdom + Testing Library）で動かします。
+（Create React App から移行済み。`react-scripts` は使っていません。）
 
 ## アーキテクチャ（機能単位 × レイヤ）
 
@@ -49,9 +51,10 @@ src/
     └─ features/note/...
 ```
 
-インポートは `tsconfig.json` の `baseUrl: "src"` により
-`import { Note } from "features/note/domain/types/Note";` のように
-`src` 起点で記述します。
+インポートは `import { Note } from "features/note/domain/types/Note";` のように
+`src` 起点で記述します。対応表は `tsconfig.json` の `paths`（型検査用）と
+`vite.config.ts` の `resolve.alias`（ビルド・テスト用）の 2 か所にあるため、
+`src` 直下にディレクトリを増やすときは両方に追加してください。
 
 ### テストの置き場所
 
@@ -59,8 +62,9 @@ src/
 （例: `src/features/note/domain/schemas/NoteSchema.ts` →
 `src/test/features/note/domain/NoteSchema.test.ts`）。
 
-`react-scripts` の Jest は `roots` が `<rootDir>/src` に固定されているため、
-テストフォルダはプロジェクト直下ではなく **`src` の中**に置く必要があります。
+Vitest は `vite.config.ts` の `test.include`（`src/test/**/*.test.{ts,tsx}`）に
+一致するファイルだけを実行します。`describe` / `test` / `expect` / `vi` はグローバルに
+使えます（`test.globals: true`）。モックの型が必要なときは `import type { Mock } from "vitest";`。
 
 ### バリデーション（Zod + React Hook Form）
 
@@ -98,80 +102,47 @@ src/
 
 ```bash
 npm install
-npm start   # http://localhost:5173 で起動
+npm start   # = vite。http://localhost:5173 で起動
 ```
+
+ポートは `vite.config.ts` の `server.port` で固定し、`strictPort: true` にしているため、
+5173 が使用中なら別ポートへ逃げずに起動エラーになります。
 
 ポートを **5173** に固定しているのは、バックエンドの CORS 許可オリジンが
 `app.api.endpoint.base-url=http://localhost:5173` の 1 つだけで、かつ
-`withCredentials: true` で通信しているためです。3000 番のままだとプリフライトで
+`withCredentials: true` で通信しているためです。別のポートだとプリフライトで
 拒否されます。
 
-接続先は環境変数 `REACT_APP_API_BASE_URL`（末尾の `/api` まで含める）で決まります。
+接続先は環境変数 `VITE_API_BASE_URL`（末尾の `/api` まで含める）で決まります。
+Vite がクライアントに埋め込むのは `VITE_` で始まる変数だけで、コードからは
+`import.meta.env.VITE_API_BASE_URL` で参照します（型は `src/vite-env.d.ts`）。
+CRA 時代の `REACT_APP_API_BASE_URL` は読まれないので、手元の `.env.local` などに
+残っている場合は名前を変えてください。
 
 | ファイル | 用途 | コミット |
 |---|---|---|
 | `.env.development` | ローカルの既定値（`http://localhost:8080/api`） | する |
 | `.env.local` | 端末ごとの上書き（ポート変更時など） | しない |
-| `.env.production` | 本番。CI が Secrets から生成 | しない |
+| `.env.production` | 本番。CI が Secret `REACT_APP_API_BASE_URL` の値を `VITE_API_BASE_URL` として書き出す | しない |
 
 8080 が別プロセスに使われているなど既定値で動かない場合は、バックエンドのポートを
 変えたうえで `.env.local` に次のように書いて上書きします。
 
 ```
-REACT_APP_API_BASE_URL=http://localhost:8081/api
+VITE_API_BASE_URL=http://localhost:8081/api
 ```
 
-### テスト環境についての注意
+## コマンド
 
-`react-scripts@5` が同梱する Jest 27 は `package.json` の `exports` フィールドに
-対応していません。そのため
+| コマンド | 内容 |
+|---|---|
+| `npm start`（`npm run dev`） | 開発サーバを http://localhost:5173 で起動 |
+| `npm test` | テストを 1 回だけ実行（`vitest run`）。`npm test -- --coverage` でカバレッジを `coverage/` に出力 |
+| `npm run test:watch` | テストを監視モードで実行 |
+| `npm run typecheck` | 型検査（`tsc --noEmit`） |
+| `npm run build` | 本番ビルドを `build/` に出力（デプロイジョブが S3 へ同期する） |
+| `npm run preview` | `build/` を http://localhost:5173 で配信して確認 |
 
-- `react-router-dom` は `exports` だけで解決される v7 ではなく、`main` を持つ **v6 系**を使用しています
-- `axios` / `date-fns` / `date-fns-tz` は ESM のまま配布されているため、
-  `package.json` の `jest.transformIgnorePatterns` で変換対象に含めています
-
-これらは Jest 側の制約への対処なので、将来 Vite など `exports` 対応のツールへ
-移行する際にはまとめて不要になります。
-
-## Available Scripts
-
-In the project directory, you can run:
-
-### `npm start`
-
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
-
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+ESLint は CRA に同梱されていた設定（`eslintConfig`）を移行時に外しており、現在は未設定です。
+typescript-eslint が TypeScript 7 にまだ対応していない（peer が `<6.1.0`）ためで、
+対応後に flat config で追加する想定です。

@@ -1,3 +1,4 @@
+import type { Mock } from "vitest";
 import { httpClient } from "infrastructure/http/httpClient";
 import { localStorageTokenStorage } from "infrastructure/storage/LocalStorageTokenStorage";
 import { SESSION_EXPIRED_EVENT } from "shared/auth/sessionExpiry";
@@ -37,11 +38,11 @@ const succeedWith = (data: unknown) => {
 };
 
 describe("httpClient の 401 ハンドリング", () => {
-  let sessionExpired: jest.Mock;
+  let sessionExpired: Mock;
 
   beforeEach(() => {
     localStorage.clear();
-    sessionExpired = jest.fn();
+    sessionExpired = vi.fn();
     window.addEventListener(SESSION_EXPIRED_EVENT, sessionExpired);
   });
 

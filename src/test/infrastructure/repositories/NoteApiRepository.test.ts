@@ -1,3 +1,4 @@
+import type { Mock } from "vitest";
 import { AxiosInstance } from "axios";
 import { NoteApiRepository } from "infrastructure/repositories/NoteApiRepository";
 
@@ -26,13 +27,13 @@ const noteJson = (id: number) => ({
 const pageOf = (count: number, startId = 1) =>
   Array.from({ length: count }, (_, index) => noteJson(startId + index));
 
-const httpOf = (get: jest.Mock) => ({ get } as unknown as AxiosInstance);
+const httpOf = (get: Mock) => ({ get } as unknown as AxiosInstance);
 
 describe("NoteApiRepository#findAll", () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   test("1ページに収まる場合は1回だけ要求する", async () => {
-    const get = jest.fn().mockResolvedValue({ data: pageOf(3) });
+    const get = vi.fn().mockResolvedValue({ data: pageOf(3) });
 
     const notes = await new NoteApiRepository(httpOf(get)).findAll();
 
@@ -44,7 +45,7 @@ describe("NoteApiRepository#findAll", () => {
   });
 
   test("満杯のページが返る間は次のページを取りに行き、全件を返す", async () => {
-    const get = jest
+    const get = vi
       .fn()
       .mockResolvedValueOnce({ data: pageOf(PAGE_SIZE, 1) })
       .mockResolvedValueOnce({ data: pageOf(PAGE_SIZE, PAGE_SIZE + 1) })
@@ -66,7 +67,7 @@ describe("NoteApiRepository#findAll", () => {
   });
 
   test("ちょうど1ページ分だった場合は空ページを1回だけ確認して終わる", async () => {
-    const get = jest
+    const get = vi
       .fn()
       .mockResolvedValueOnce({ data: pageOf(PAGE_SIZE) })
       .mockResolvedValueOnce({ data: [] });
@@ -78,8 +79,8 @@ describe("NoteApiRepository#findAll", () => {
   });
 
   test("常に満杯が返り続けても上限で打ち切り、警告を残す", async () => {
-    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
-    const get = jest.fn().mockResolvedValue({ data: pageOf(PAGE_SIZE) });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const get = vi.fn().mockResolvedValue({ data: pageOf(PAGE_SIZE) });
 
     const notes = await new NoteApiRepository(httpOf(get)).findAll();
 
@@ -90,8 +91,8 @@ describe("NoteApiRepository#findAll", () => {
   });
 
   test("取得に失敗した場合は例外を伝播させる", async () => {
-    jest.spyOn(console, "error").mockImplementation(() => {});
-    const get = jest.fn().mockRejectedValue(new Error("boom"));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const get = vi.fn().mockRejectedValue(new Error("boom"));
 
     await expect(new NoteApiRepository(httpOf(get)).findAll()).rejects.toThrow(
       "boom"
@@ -101,7 +102,7 @@ describe("NoteApiRepository#findAll", () => {
 
 describe("NoteApiRepository#create", () => {
   test("作成日時や id を送らない（サーバが決めるため）", async () => {
-    const post = jest.fn().mockResolvedValue({ data: noteJson(1) });
+    const post = vi.fn().mockResolvedValue({ data: noteJson(1) });
     const http = { post } as unknown as AxiosInstance;
 
     await new NoteApiRepository(http).create({

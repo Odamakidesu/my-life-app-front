@@ -4,14 +4,6 @@
   "private": true,
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
-    "@testing-library/dom": "^10.4.2",
-    "@testing-library/jest-dom": "^7.0.1",
-    "@testing-library/react": "^16.3.3",
-    "@testing-library/user-event": "^14.6.7",
-    "@types/jest": "^30.0.0",
-    "@types/node": "^16.18.126",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
     "axios": "^1.20.0",
     "bootstrap": "^5.3.5",
     "date-fns": "^4.1.0",
@@ -21,44 +13,34 @@
     "react-dom": "^19.3.0",
     "react-hook-form": "^7.88.0",
     "react-router-dom": "^6.30.6",
-    "react-scripts": "5.0.1",
     "react-select": "^5.10.2",
     "react-transition-group": "^4.4.5",
-    "typescript": "^4.9.5",
     "web-vitals": "^2.1.4",
     "zod": "^3.25.76"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "jest": {
-    "transformIgnorePatterns": [
-      "[/\\\\]node_modules[/\\\\](?!axios|date-fns|date-fns-tz)[^/\\\\]+[/\\\\].+\\.(js|jsx|mjs|cjs|ts|tsx)$",
-      "^.+\\.module\\.(css|sass|scss)$"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+    "start": "vite",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
-    "@types/date-fns": "^2.6.3"
-  }
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
+    "@types/node": "^26.6.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "@vitest/coverage-v8": "^5.0.3",
+    "jsdom": "^29.1.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
+  },
+  "type": "module"
 }
