@@ -5,6 +5,7 @@ import type { Credentials } from "features/auth/types/schema";
 
 export interface AuthRepository {
   login(credentials: Credentials): Promise<AuthToken>;
+  register(credentials: Credentials): Promise<void>;
 }
 
 export interface TokenStorage {

@@ -6,6 +6,7 @@ import React, {
 } from "react";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { Button } from "react-bootstrap";
+import { Link } from "react-router-dom";
 import { useAuth } from "features/auth/hooks/useAuth";
 import { useNotes } from "features/note/hooks/useNotes";
 import { useTags } from "features/tag/hooks/useTags";
@@ -94,7 +95,7 @@ const NotesPage: React.FC<NotesPageProps> = ({ theme }) => {
 
   const handleDeleteNote = useCallback(
     async (id: number) => {
-      if (!window.confirm("本当に削除しますか？")) return;
+      if (!window.confirm("メモをゴミ箱に移動しますか？（ゴミ箱から復元できます）")) return;
 
       const succeeded = await deleteNote(id);
       if (succeeded) resetAfterMutation();
@@ -132,7 +133,13 @@ const NotesPage: React.FC<NotesPageProps> = ({ theme }) => {
 
   return (
     <div className="container mt-4" data-bs-theme={theme}>
-      <div className="d-flex justify-content-end align-items-center mb-4">
+      <div className="d-flex justify-content-end align-items-center gap-2 mb-4">
+        <Link to="/tags" className="btn btn-outline-secondary">
+          タグ管理
+        </Link>
+        <Link to="/trash" className="btn btn-outline-secondary">
+          ゴミ箱
+        </Link>
         <Button
           variant="outline-danger"
           className="d-flex align-items-center"

@@ -16,6 +16,15 @@ export class AuthService {
     this.tokenStorage.save(token);
   }
 
+  /**
+   * 新規登録し、そのままログインする。
+   * 登録 API はトークンを返さないため、続けてログインして画面遷移できる状態にする。
+   */
+  async register(credentials: Credentials): Promise<void> {
+    await this.repository.register(credentials);
+    await this.login(credentials);
+  }
+
   /** 保管中のトークンを破棄する */
   logout(): void {
     this.tokenStorage.clear();

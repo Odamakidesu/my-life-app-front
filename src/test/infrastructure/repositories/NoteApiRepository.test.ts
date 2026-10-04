@@ -123,3 +123,40 @@ describe("NoteApiRepository#create", () => {
     expect(payload).not.toHaveProperty("created_at");
   });
 });
+
+describe("NoteApiRepository のゴミ箱操作", () => {
+  test("ゴミ箱の一覧も最後のページまで辿る", async () => {
+    const get = vi
+      .fn()
+      .mockResolvedValueOnce({ data: pageOf(PAGE_SIZE, 1) })
+      .mockResolvedValueOnce({ data: pageOf(2, PAGE_SIZE + 1) });
+
+    const notes = await new NoteApiRepository(httpOf(get)).findDeleted();
+
+    expect(notes).toHaveLength(PAGE_SIZE + 2);
+    expect(get).toHaveBeenNthCalledWith(1, "/notes/deleted", {
+      params: { page: 0, size: PAGE_SIZE },
+    });
+    expect(get).toHaveBeenNthCalledWith(2, "/notes/deleted", {
+      params: { page: 1, size: PAGE_SIZE },
+    });
+  });
+
+  test("復元は delete_flg=false を送る", async () => {
+    const put = vi.fn().mockResolvedValue({});
+    const http = { put } as unknown as AxiosInstance;
+
+    await new NoteApiRepository(http).restore(7);
+
+    expect(put).toHaveBeenCalledWith("/notes/7/deleted", { delete_flg: false });
+  });
+
+  test("完全削除は DELETE を送る", async () => {
+    const del = vi.fn().mockResolvedValue({});
+    const http = { delete: del } as unknown as AxiosInstance;
+
+    await new NoteApiRepository(http).deletePermanently(7);
+
+    expect(del).toHaveBeenCalledWith("/notes/7");
+  });
+});
