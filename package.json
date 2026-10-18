@@ -19,7 +19,7 @@
     "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
     "web-vitals": "^2.1.4",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "scripts": {
     "start": "vite",
